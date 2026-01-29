@@ -12,17 +12,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// Flash Messages - Auto dismiss
+// Toast Notifications - Auto dismiss
 // ============================================
 
 function initFlashMessages() {
-    const alerts = document.querySelectorAll('.alert[data-auto-dismiss]');
-    alerts.forEach(alert => {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) return;
+
+    const toasts = toastContainer.querySelectorAll('.toast');
+    toasts.forEach(toast => {
+        // Remove toast after animation completes (2 seconds)
         setTimeout(() => {
-            alert.style.opacity = '0';
-            alert.style.transform = 'translateY(-10px)';
-            setTimeout(() => alert.remove(), 300);
-        }, 5000);
+            toast.remove();
+            // Remove container if empty
+            if (toastContainer.children.length === 0) {
+                toastContainer.remove();
+            }
+        }, 2000);
     });
 }
 

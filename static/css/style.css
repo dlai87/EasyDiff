@@ -402,6 +402,73 @@ a:hover {
     border: 1px solid #BFDBFE;
 }
 
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    pointer-events: none;
+}
+
+.toast {
+    padding: var(--space-4) var(--space-6);
+    border-radius: var(--radius-lg);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 1.7s forwards;
+    pointer-events: auto;
+    text-align: center;
+    max-width: 400px;
+}
+
+.toast-success {
+    background: var(--success);
+    color: white;
+}
+
+.toast-error {
+    background: var(--danger);
+    color: white;
+}
+
+.toast-warning {
+    background: var(--warning);
+    color: white;
+}
+
+.toast-info {
+    background: var(--primary);
+    color: white;
+}
+
+@keyframes toastIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes toastOut {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+
 /* Badges */
 .badge {
     display: inline-flex;
@@ -1322,6 +1389,47 @@ a:hover {
 .badge-warning {
     background: var(--warning-light);
     color: #92400E;
+}
+
+/* Add Item Row */
+.add-item-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+}
+
+.add-item-row .form-input {
+    flex: 1;
+}
+
+.add-item-extras {
+    margin-top: var(--space-2);
+}
+
+.add-desc-link {
+    background: none;
+    border: none;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 0;
+    transition: color var(--transition-fast);
+}
+
+.add-desc-link:hover {
+    color: var(--primary);
+}
+
+.add-item-desc {
+    margin-top: var(--space-2);
+}
+
+.add-item-desc .form-input {
+    font-size: 0.875rem;
+}
+
+.mb-0 {
+    margin-bottom: 0 !important;
 }
 
 /* Item Content (Study Builder) */

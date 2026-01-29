@@ -34,30 +34,6 @@
         </div>
     </div>
 
-    <!-- Study Progress/Checklist -->
-    {% if study.status == 'DRAFT' %}
-    <div class="card mb-6 setup-checklist">
-        <h3 class="card-title mb-4">Setup Checklist</h3>
-        <div class="checklist-items">
-            <div class="checklist-item {{ 'completed' if study.item_count >= 5 else 'pending' }}">
-                <span class="checklist-icon">{{ '✓' if study.item_count >= 5 else '○' }}</span>
-                <span class="checklist-text">Add at least 5 items to compare</span>
-                <span class="checklist-status">{{ study.item_count }}/5 minimum</span>
-            </div>
-            <div class="checklist-item {{ 'completed' if study.item_count >= 7 else 'pending' }}">
-                <span class="checklist-icon">{{ '✓' if study.item_count >= 7 else '○' }}</span>
-                <span class="checklist-text">Recommended: 7-25 items for best results</span>
-                <span class="checklist-status">{{ study.item_count }} items</span>
-            </div>
-            <div class="checklist-item {{ 'warning' if study.item_count > 25 else 'completed' if study.item_count >= 5 else 'pending' }}">
-                <span class="checklist-icon">{{ '⚠' if study.item_count > 25 else '✓' if study.item_count >= 5 else '○' }}</span>
-                <span class="checklist-text">Keep under 30 items maximum</span>
-                <span class="checklist-status">{{ study.item_count }}/30 max</span>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
     <div class="grid" style="grid-template-columns: 1fr 380px; gap: var(--space-6);">
         <!-- Main Content: Items -->
         <div>
@@ -86,25 +62,31 @@
                 {% if study.status == 'DRAFT' %}
                 <form method="POST" id="item-form" class="mb-4">
                     <input type="hidden" name="action" value="add_item">
-                    <div class="form-group mb-2">
+                    <div class="add-item-row">
                         <input
                             type="text"
                             name="item_name"
                             id="item-input"
                             class="form-input"
-                            placeholder="Item name (required)"
+                            placeholder="Enter item name..."
                             maxlength="200"
                             required
                         >
+                        <button type="submit" class="btn btn-primary btn-sm">Add</button>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="add-item-extras">
+                        <button type="button" class="add-desc-link" id="desc-toggle" onclick="toggleDescField()">
+                            <span id="desc-toggle-text">+ Add description</span>
+                        </button>
+                    </div>
+                    <div id="desc-field" class="add-item-desc hidden">
                         <input
                             type="text"
                             name="item_description"
+                            id="item-desc-input"
                             class="form-input"
-                            placeholder="Description (optional)"
+                            placeholder="Optional description to help respondents..."
                         >
-                        <button type="submit" class="btn btn-primary">Add Item</button>
                     </div>
                 </form>
 
@@ -283,16 +265,19 @@ Competitive pricing"
                     <div class="form-group">
                         <label for="sets_per_respondent" class="form-label">
                             Questions Per Respondent
-                            <span class="tooltip-trigger" title="More questions = more reliable data, but longer survey. Each item should appear about 3 times.">ⓘ</span>
+                            <span class="tooltip-trigger" title="Auto-selected for best practice (~3 appearances per item). You can adjust if needed.">ⓘ</span>
                         </label>
+                        {% set recommended = ((3 * study.item_count / study.items_per_set) | round | int) if study.item_count > 0 else 10 %}
+                        {% if recommended < 5 %}{% set recommended = 5 %}{% endif %}
+                        {% if recommended > 20 %}{% set recommended = 20 %}{% endif %}
                         <select id="sets_per_respondent" name="sets_per_respondent" class="form-select">
                             {% for i in range(5, 21) %}
-                                <option value="{{ i }}" {{ 'selected' if study.sets_per_respondent == i }}>{{ i }} questions{% if i == 10 %} (recommended){% endif %}</option>
+                                <option value="{{ i }}" {{ 'selected' if i == recommended }}>{{ i }} questions</option>
                             {% endfor %}
                         </select>
                         <p class="form-hint" id="sets-recommendation">
                             {% if study.item_count > 0 %}
-                                Each item will appear ~{{ ((study.sets_per_respondent * study.items_per_set) / study.item_count) | round(1) }} times per respondent
+                                Each item will appear ~{{ ((recommended * study.items_per_set) / study.item_count) | round(1) }} times per respondent
                             {% else %}
                                 Add items to see appearance frequency
                             {% endif %}
@@ -386,16 +371,58 @@ Competitive pricing"
 
 {% block scripts %}
 <script>
+// Toggle description field visibility
+function toggleDescField() {
+    const descField = document.getElementById('desc-field');
+    const toggleText = document.getElementById('desc-toggle-text');
+    const descInput = document.getElementById('item-desc-input');
+
+    if (descField.classList.contains('hidden')) {
+        descField.classList.remove('hidden');
+        toggleText.textContent = '− Hide description';
+        descInput.focus();
+    } else {
+        descField.classList.add('hidden');
+        toggleText.textContent = '+ Add description';
+        descInput.value = '';
+    }
+}
+
+// Clear description field after form submit
+const itemForm = document.getElementById('item-form');
+if (itemForm) {
+    itemForm.addEventListener('submit', function() {
+        // Form will submit, but we prep for next item
+        setTimeout(() => {
+            const descField = document.getElementById('desc-field');
+            const toggleText = document.getElementById('desc-toggle-text');
+            if (descField && !descField.classList.contains('hidden')) {
+                descField.classList.add('hidden');
+                toggleText.textContent = '+ Add description';
+            }
+        }, 100);
+    });
+}
+
 // Update sets recommendation dynamically
 const itemsPerSetSelect = document.getElementById('items_per_set');
 const setsSelect = document.getElementById('sets_per_respondent');
 const recommendation = document.getElementById('sets-recommendation');
 const itemCount = {{ study.item_count }};
 
+function calculateRecommendedSets(itemsPerSet) {
+    // Target: each item appears ~3 times
+    // Formula: recommended = (3 * itemCount) / itemsPerSet
+    const recommended = Math.round((3 * itemCount) / itemsPerSet);
+    // Clamp between 5 and 20
+    return Math.max(5, Math.min(20, recommended));
+}
+
 function updateRecommendation() {
+    const itemsPerSet = parseInt(itemsPerSetSelect.value);
+    const sets = parseInt(setsSelect.value);
+
     if (itemCount > 0) {
-        const itemsPerSet = parseInt(itemsPerSetSelect.value);
-        const sets = parseInt(setsSelect.value);
         const appearances = ((sets * itemsPerSet) / itemCount).toFixed(1);
         recommendation.textContent = `Each item will appear ~${appearances} times per respondent`;
 
@@ -412,9 +439,21 @@ function updateRecommendation() {
     }
 }
 
+function autoSelectRecommended() {
+    if (itemCount > 0) {
+        const itemsPerSet = parseInt(itemsPerSetSelect.value);
+        const recommended = calculateRecommendedSets(itemsPerSet);
+        setsSelect.value = recommended;
+        updateRecommendation();
+    }
+}
+
 if (itemsPerSetSelect && setsSelect) {
-    itemsPerSetSelect.addEventListener('change', updateRecommendation);
+    // Auto-select recommended when items_per_set changes
+    itemsPerSetSelect.addEventListener('change', autoSelectRecommended);
+    // Update display when manually changing sets
     setsSelect.addEventListener('change', updateRecommendation);
+    // Initial update
     updateRecommendation();
 }
 

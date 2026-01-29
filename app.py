@@ -281,28 +281,38 @@ def study_edit(id):
             flash('Study settings updated.', 'success')
 
         elif action == 'add_item':
-            item_name = request.form.get('item_name', '').strip()
-            item_description = request.form.get('item_description', '').strip()
+            item_name = str(request.form.get('item_name', '') or '').strip()
+            item_description = str(request.form.get('item_description', '') or '').strip()
             if item_name:
-                max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
-                item = Item(name=item_name, description=item_description or None, order=max_order + 1, study_id=study.id)
-                db.session.add(item)
-                db.session.commit()
-                flash('Item added.', 'success')
+                # Check for duplicate item name in this study
+                existing_item = Item.query.filter_by(study_id=study.id, name=item_name).first()
+                if existing_item:
+                    flash(f'Item "{item_name}" already exists. Please use a unique name.', 'error')
+                else:
+                    max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
+                    item = Item(name=item_name, description=item_description if item_description else None, order=max_order + 1, study_id=study.id)
+                    db.session.add(item)
+                    db.session.commit()
+                    flash('Item added.', 'success')
             else:
                 flash('Item name is required.', 'error')
 
         elif action == 'update_item':
             item_id = request.form.get('item_id')
-            item_name = request.form.get('item_name', '').strip()
-            item_description = request.form.get('item_description', '').strip()
+            item_name = str(request.form.get('item_name', '') or '').strip()
+            item_description = str(request.form.get('item_description', '') or '').strip()
             if item_id and item_name:
                 item = Item.query.filter_by(id=item_id, study_id=study.id).first()
                 if item:
-                    item.name = item_name
-                    item.description = item_description or None
-                    db.session.commit()
-                    flash('Item updated.', 'success')
+                    # Check for duplicate name (excluding current item)
+                    existing_item = Item.query.filter_by(study_id=study.id, name=item_name).filter(Item.id != item.id).first()
+                    if existing_item:
+                        flash(f'Item "{item_name}" already exists. Please use a unique name.', 'error')
+                    else:
+                        item.name = item_name
+                        item.description = item_description if item_description else None
+                        db.session.commit()
+                        flash('Item updated.', 'success')
 
         elif action == 'delete_item':
             item_id = request.form.get('item_id')
@@ -383,24 +393,37 @@ def study_bulk_import(id):
 
     max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
 
+    # Get existing item names for duplicate check
+    existing_names = {item.name.lower() for item in study.items.all()}
+
     added = 0
+    skipped = []
     for i, line in enumerate(lines):
         # Support format: "Name | Description" or just "Name"
         if '|' in line:
             parts = line.split('|', 1)
-            item_name = parts[0].strip()[:200]
-            item_description = parts[1].strip() if len(parts) > 1 else None
+            item_name = str(parts[0]).strip()[:200]
+            item_description = str(parts[1]).strip() if len(parts) > 1 else None
         else:
-            item_name = line[:200]
+            item_name = str(line).strip()[:200]
             item_description = None
 
         if item_name:
-            item = Item(name=item_name, description=item_description, order=max_order + i + 1, study_id=study.id)
-            db.session.add(item)
-            added += 1
+            # Check for duplicate (case-insensitive)
+            if item_name.lower() in existing_names:
+                skipped.append(item_name)
+            else:
+                item = Item(name=item_name, description=item_description if item_description else None, order=max_order + added + 1, study_id=study.id)
+                db.session.add(item)
+                existing_names.add(item_name.lower())
+                added += 1
 
     db.session.commit()
-    flash(f'Successfully imported {added} items.', 'success')
+
+    if skipped:
+        flash(f'Imported {added} items. Skipped {len(skipped)} duplicate(s): {", ".join(skipped[:3])}{"..." if len(skipped) > 3 else ""}', 'warning')
+    else:
+        flash(f'Successfully imported {added} items.', 'success')
     return redirect(url_for('study_edit', id=study.id))
 
 
@@ -652,14 +675,19 @@ def api_add_item(id):
     study = Study.query.filter_by(id=id, user_id=current_user.id).first_or_404()
 
     data = request.get_json()
-    name = data.get('name', '').strip()
-    description = data.get('description', '').strip()
+    name = str(data.get('name', '') or '').strip()
+    description = str(data.get('description', '') or '').strip()
 
     if not name:
         return jsonify({'error': 'Item name is required'}), 400
 
+    # Check for duplicate
+    existing_item = Item.query.filter_by(study_id=study.id, name=name).first()
+    if existing_item:
+        return jsonify({'error': f'Item "{name}" already exists. Please use a unique name.'}), 400
+
     max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
-    item = Item(name=name, description=description or None, order=max_order + 1, study_id=study.id)
+    item = Item(name=name, description=description if description else None, order=max_order + 1, study_id=study.id)
     db.session.add(item)
     db.session.commit()
 
@@ -679,15 +707,19 @@ def api_item(id, item_id):
 
     if request.method == 'PUT':
         data = request.get_json()
-        name = data.get('name', '').strip()
-        description = data.get('description', '').strip()
+        name = str(data.get('name', '') or '').strip()
+        description = str(data.get('description', '') or '').strip()
         if name:
+            # Check for duplicate (excluding current item)
+            existing_item = Item.query.filter_by(study_id=study.id, name=name).filter(Item.id != item.id).first()
+            if existing_item:
+                return jsonify({'error': f'Item "{name}" already exists. Please use a unique name.'}), 400
             item.name = name
-            item.description = description or None
+            item.description = description if description else None
             db.session.commit()
             return jsonify({'id': item.id, 'name': item.name, 'description': item.description})
         return jsonify({'error': 'Item name is required'}), 400
 
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5001)

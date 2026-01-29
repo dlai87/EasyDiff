@@ -31,19 +31,20 @@
     </nav>
     {% endblock %}
 
-    <main>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="container" style="padding-top: var(--space-4);">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}" data-auto-dismiss>
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
+    <!-- Toast Notifications -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="toast-container" id="toast-container">
+                {% for category, message in messages %}
+                    <div class="toast toast-{{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
 
+    <main>
         {% block content %}{% endblock %}
     </main>
 
