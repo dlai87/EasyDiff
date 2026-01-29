@@ -1118,3 +1118,46 @@ a:hover {
         display: none;
     }
 }
+
+/* Google OAuth Button */
+.google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--foreground);
+    font-weight: 500;
+}
+
+.google-btn:hover {
+    background: var(--muted);
+    color: var(--foreground);
+}
+
+.google-btn svg {
+    flex-shrink: 0;
+}
+
+/* Divider */
+.divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: var(--space-6) 0;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border);
+}
+
+.divider-text {
+    padding: 0 var(--space-4);
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}

@@ -12,13 +12,19 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(256), nullable=True)  # Nullable for OAuth users
+    google_id = db.Column(db.String(100), unique=True, nullable=True, index=True)  # Google OAuth ID
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     studies = db.relationship('Study', backref='owner', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<User {self.email}>'
+
+    @property
+    def has_password(self):
+        """Check if user has a password set (not OAuth-only user)."""
+        return self.password_hash is not None
 
 
 class Study(db.Model):

@@ -1,11 +1,13 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, session
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from authlib.integrations.flask_client import OAuth
 from datetime import datetime
 import uuid
 import json
 import csv
 import io
+import os
 
 from config import Config
 from models import db, User, Study, Item, Response, Answer
@@ -21,6 +23,20 @@ login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 login_manager.login_message_category = 'info'
 
+# OAuth setup
+oauth = OAuth(app)
+
+# Google OAuth configuration
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -30,6 +46,11 @@ def load_user(user_id):
 # Create database tables
 with app.app_context():
     db.create_all()
+
+
+def hash_password(password):
+    """Hash password using pbkdf2:sha256 for better compatibility."""
+    return generate_password_hash(password, method='pbkdf2:sha256')
 
 
 # ============== Public Routes ==============
@@ -76,7 +97,7 @@ def register():
         user = User(
             name=name,
             email=email,
-            password_hash=generate_password_hash(password)
+            password_hash=hash_password(password)
         )
         db.session.add(user)
         db.session.commit()
@@ -84,7 +105,9 @@ def register():
         flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('login'))
 
-    return render_template('auth/register.html')
+    # Check if Google OAuth is configured
+    google_enabled = bool(os.environ.get('GOOGLE_CLIENT_ID'))
+    return render_template('auth/register.html', google_enabled=google_enabled)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -99,16 +122,79 @@ def login():
 
         user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password_hash, password):
+        if user and user.password_hash and check_password_hash(user.password_hash, password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
             flash('Welcome back!', 'success')
             return redirect(next_page or url_for('dashboard'))
 
         flash('Invalid email or password.', 'error')
-        return render_template('auth/login.html', email=email)
+        google_enabled = bool(os.environ.get('GOOGLE_CLIENT_ID'))
+        return render_template('auth/login.html', email=email, google_enabled=google_enabled)
 
-    return render_template('auth/login.html')
+    google_enabled = bool(os.environ.get('GOOGLE_CLIENT_ID'))
+    return render_template('auth/login.html', google_enabled=google_enabled)
+
+
+# ============== Google OAuth Routes ==============
+
+@app.route('/login/google')
+def login_google():
+    """Initiate Google OAuth login."""
+    if not os.environ.get('GOOGLE_CLIENT_ID'):
+        flash('Google login is not configured.', 'error')
+        return redirect(url_for('login'))
+
+    redirect_uri = url_for('authorize_google', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+
+@app.route('/authorize/google')
+def authorize_google():
+    """Handle Google OAuth callback."""
+    try:
+        token = google.authorize_access_token()
+        user_info = token.get('userinfo')
+
+        if not user_info:
+            flash('Could not get user info from Google.', 'error')
+            return redirect(url_for('login'))
+
+        email = user_info.get('email', '').lower()
+        name = user_info.get('name', email.split('@')[0])
+
+        if not email:
+            flash('Could not get email from Google.', 'error')
+            return redirect(url_for('login'))
+
+        # Find or create user
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            # Create new user from Google data
+            user = User(
+                name=name,
+                email=email,
+                password_hash=None,  # No password for OAuth users
+                google_id=user_info.get('sub')
+            )
+            db.session.add(user)
+            db.session.commit()
+            flash('Account created with Google!', 'success')
+        else:
+            # Update Google ID if not set
+            if not user.google_id:
+                user.google_id = user_info.get('sub')
+                db.session.commit()
+
+        login_user(user, remember=True)
+        flash('Welcome back!', 'success')
+        return redirect(url_for('dashboard'))
+
+    except Exception as e:
+        app.logger.error(f'Google OAuth error: {e}')
+        flash('Google login failed. Please try again.', 'error')
+        return redirect(url_for('login'))
 
 
 @app.route('/logout')

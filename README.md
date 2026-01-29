@@ -139,6 +139,23 @@ Environment variables (can be set in `.env`):
 |----------|-------------|---------|
 | `SECRET_KEY` | Flask session secret key | `dev-secret-key-change-in-production` |
 | `DATABASE_URL` | SQLite database path | `sqlite:///easydiff.db` |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | (disabled if empty) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | (disabled if empty) |
+
+### Setting up Google OAuth (Optional)
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project or select an existing one
+3. Go to "Credentials" and click "Create Credentials" > "OAuth client ID"
+4. Select "Web application" as the application type
+5. Add authorized redirect URI: `http://localhost:5000/authorize/google` (for local development)
+6. Copy the Client ID and Client Secret to your `.env` file:
+   ```
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   ```
+
+Note: For production, add your production domain to the authorized redirect URIs.
 
 ## Development
 
