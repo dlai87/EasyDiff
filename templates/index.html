@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="container container-lg">
+        <h1>Understand What Matters Most</h1>
+        <p>Create MaxDiff surveys to discover your users' true preferences. Simple to build, easy to share, beautiful results.</p>
+        <div class="hero-buttons">
+            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Start Free</a>
+            <a href="#features" class="btn btn-secondary btn-lg">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<section id="features" class="section" style="background: var(--muted);">
+    <div class="container">
+        <div class="section-header">
+            <h2>Why MaxDiff?</h2>
+            <p class="text-muted">MaxDiff (Best-Worst Scaling) reveals true preferences by forcing trade-offs</p>
+        </div>
+        <div class="grid grid-3">
+            <div class="card feature-card">
+                <div class="feature-icon">1</div>
+                <h3>Eliminates Bias</h3>
+                <p class="text-muted">Unlike rating scales, respondents can't rate everything high. They must choose.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">2</div>
+                <h3>Clear Rankings</h3>
+                <p class="text-muted">Get a definitive ranked list of preferences, not ambiguous average scores.</p>
+            </div>
+            <div class="card feature-card">
+                <div class="feature-icon">3</div>
+                <h3>Easy for Respondents</h3>
+                <p class="text-muted">Simple best/worst choices are intuitive and require less cognitive effort.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2>How It Works</h2>
+            <p class="text-muted">Three simple steps to actionable insights</p>
+        </div>
+        <div class="grid grid-3">
+            <div class="card">
+                <h4 class="mb-2">1. Create Your Study</h4>
+                <p class="text-muted text-sm">Add the items you want to compare. Features, products, messages - anything you want to prioritize.</p>
+            </div>
+            <div class="card">
+                <h4 class="mb-2">2. Share & Collect</h4>
+                <p class="text-muted text-sm">Send your unique survey link to respondents. They'll pick their best and worst from each set.</p>
+            </div>
+            <div class="card">
+                <h4 class="mb-2">3. Analyze Results</h4>
+                <p class="text-muted text-sm">See clear rankings with scores. Export to CSV. Make data-driven decisions.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="background: var(--muted);">
+    <div class="container">
+        <div class="section-header">
+            <h2>Perfect For</h2>
+        </div>
+        <div class="grid grid-4">
+            <div class="text-center py-4">
+                <h4>Product Teams</h4>
+                <p class="text-muted text-sm">Prioritize features based on real user preferences</p>
+            </div>
+            <div class="text-center py-4">
+                <h4>Marketers</h4>
+                <p class="text-muted text-sm">Test messaging and value propositions</p>
+            </div>
+            <div class="text-center py-4">
+                <h4>Researchers</h4>
+                <p class="text-muted text-sm">Conduct academic studies with best-worst scaling</p>
+            </div>
+            <div class="text-center py-4">
+                <h4>UX Designers</h4>
+                <p class="text-muted text-sm">Discover what users value most in your product</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <div class="container text-center">
+        <h2 class="mb-4">Ready to discover true preferences?</h2>
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg">Create Your First Study</a>
+    </div>
+</section>
+{% endblock %}

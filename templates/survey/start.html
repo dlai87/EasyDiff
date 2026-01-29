@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ study.name }}{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="survey-container">
+    <div class="survey-header">
+        <h1>{{ study.name }}</h1>
+        {% if study.description %}
+            <p class="text-muted mt-2">{{ study.description }}</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 class="text-lg font-semibold mb-4">How This Works</h2>
+
+        <div class="mb-6">
+            <p class="text-muted mb-4">
+                You'll be shown {{ study.sets_per_respondent }} questions. Each question shows {{ study.items_per_set }} options.
+            </p>
+
+            <p class="text-muted mb-4">For each question:</p>
+
+            <ul style="list-style: disc; padding-left: var(--space-6); color: var(--muted-foreground);">
+                <li class="mb-2">Select the <strong class="text-success">{{ study.best_label }}</strong> option - the one you prefer most</li>
+                <li class="mb-2">Select the <strong class="text-danger">{{ study.worst_label }}</strong> option - the one you prefer least</li>
+            </ul>
+        </div>
+
+        <form method="POST" action="{{ url_for('survey_begin', token=token) }}">
+            <button type="submit" class="btn btn-primary btn-lg w-full">
+                Start Survey
+            </button>
+        </form>
+
+        <p class="text-center text-sm text-muted mt-4">
+            Takes about 2-3 minutes to complete
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}

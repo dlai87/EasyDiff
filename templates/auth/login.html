@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container container-sm py-16">
+    <div class="card">
+        <div class="card-header text-center">
+            <h1 class="card-title" style="font-size: 1.5rem;">Welcome back</h1>
+            <p class="card-description">Sign in to your account</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="email" class="form-label">Email</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    class="form-input"
+                    placeholder="you@example.com"
+                    value="{{ email if email else '' }}"
+                    required
+                    autofocus
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    class="form-input"
+                    placeholder="Enter your password"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="remember">
+                    <span class="text-sm">Remember me</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full">Sign In</button>
+        </form>
+
+        <p class="text-center text-sm text-muted mt-6">
+            Don't have an account? <a href="{{ url_for('register') }}">Sign up</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

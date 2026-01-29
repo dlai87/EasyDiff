@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Question {{ current_set }} - {{ study.name }}{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="survey-container">
+    <div class="survey-header">
+        <h1 class="text-lg font-semibold">{{ study.name }}</h1>
+    </div>
+
+    <div class="survey-progress">
+        <div class="survey-progress-text">
+            Question {{ current_set }} of {{ total_sets }}
+        </div>
+        <div class="progress">
+            <div class="progress-bar" style="width: {{ (current_set / total_sets) * 100 }}%"></div>
+        </div>
+    </div>
+
+    <div class="survey-question">
+        <div class="survey-instruction">
+            <p>Select your <strong class="text-success">{{ study.best_label }}</strong> and <strong class="text-danger">{{ study.worst_label }}</strong> from these options:</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('survey_question', token=token) }}" id="survey-form">
+            <input type="hidden" name="best" id="best-input" value="">
+            <input type="hidden" name="worst" id="worst-input" value="">
+
+            <div class="survey-items">
+                {% for item in items %}
+                    <div class="survey-item">
+                        <button type="button"
+                                class="survey-btn survey-btn-best"
+                                data-item-id="{{ item.id }}">
+                            {{ study.best_label }}
+                        </button>
+                        <span class="survey-item-text">{{ item.text }}</span>
+                        <button type="button"
+                                class="survey-btn survey-btn-worst"
+                                data-item-id="{{ item.id }}">
+                            {{ study.worst_label }}
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="survey-submit">
+                <button type="submit" id="survey-submit" class="btn btn-primary btn-lg w-full" disabled>
+                    {% if current_set < total_sets %}
+                        Next Question
+                    {% else %}
+                        Submit Survey
+                    {% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer %}{% endblock %}

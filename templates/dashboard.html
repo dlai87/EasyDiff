@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1>Your Studies</h1>
+        <a href="{{ url_for('study_new') }}" class="btn btn-primary">New Study</a>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+        <a href="{{ url_for('dashboard', status='all') }}"
+           class="filter-tab {{ 'active' if status_filter == 'all' else '' }}">
+            All
+        </a>
+        <a href="{{ url_for('dashboard', status='draft') }}"
+           class="filter-tab {{ 'active' if status_filter == 'draft' else '' }}">
+            Draft
+        </a>
+        <a href="{{ url_for('dashboard', status='active') }}"
+           class="filter-tab {{ 'active' if status_filter == 'active' else '' }}">
+            Active
+        </a>
+        <a href="{{ url_for('dashboard', status='completed') }}"
+           class="filter-tab {{ 'active' if status_filter == 'completed' else '' }}">
+            Completed
+        </a>
+        <a href="{{ url_for('dashboard', status='archived') }}"
+           class="filter-tab {{ 'active' if status_filter == 'archived' else '' }}">
+            Archived
+        </a>
+    </div>
+
+    {% if studies %}
+        <div class="grid grid-2">
+            {% for study in studies %}
+                <div class="card card-hover study-card">
+                    <div class="study-card-header">
+                        <h3 class="study-card-title">{{ study.name }}</h3>
+                        <span class="badge badge-{{ study.status | lower }}">{{ study.status }}</span>
+                    </div>
+
+                    {% if study.description %}
+                        <p class="text-sm text-muted mb-3">{{ study.description[:100] }}{% if study.description|length > 100 %}...{% endif %}</p>
+                    {% endif %}
+
+                    <div class="study-card-meta">
+                        <span>{{ study.item_count }} items</span>
+                        <span>{{ study.responses.count() }} responses</span>
+                    </div>
+
+                    <div class="study-card-actions">
+                        {% if study.status == 'DRAFT' %}
+                            <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-primary btn-sm">Edit</a>
+                        {% elif study.status == 'ACTIVE' %}
+                            <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary btn-sm">Results</a>
+                            <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-secondary btn-sm">Settings</a>
+                        {% else %}
+                            <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-secondary btn-sm">View Results</a>
+                        {% endif %}
+                        <a href="{{ url_for('study_duplicate', id=study.id) }}" class="btn btn-ghost btn-sm">Duplicate</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📊</div>
+            <h3>No studies yet</h3>
+            <p class="text-muted">Create your first MaxDiff study to get started</p>
+            <a href="{{ url_for('study_new') }}" class="btn btn-primary">Create Study</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
