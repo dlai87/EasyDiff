@@ -432,6 +432,11 @@ a:hover {
     color: var(--muted-foreground);
 }
 
+.badge-closed {
+    background: var(--warning-light);
+    color: #92400E;
+}
+
 /* Progress Bar */
 .progress {
     width: 100%;
@@ -1160,4 +1165,204 @@ a:hover {
     color: var(--muted-foreground);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+/* Setup Checklist */
+.setup-checklist {
+    background: linear-gradient(135deg, var(--muted) 0%, var(--card) 100%);
+}
+
+.checklist-items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.checklist-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background: var(--card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+}
+
+.checklist-item.completed {
+    border-color: var(--success);
+    background: var(--success-light);
+}
+
+.checklist-item.warning {
+    border-color: var(--warning);
+    background: var(--warning-light);
+}
+
+.checklist-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+.checklist-item.completed .checklist-icon {
+    color: var(--success);
+}
+
+.checklist-item.warning .checklist-icon {
+    color: var(--warning);
+}
+
+.checklist-text {
+    flex: 1;
+    font-size: 0.875rem;
+}
+
+.checklist-status {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+/* Tips Banner */
+.tips-banner {
+    background: #EFF6FF;
+    border: 1px solid #BFDBFE;
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    font-size: 0.875rem;
+}
+
+.tips-banner strong {
+    display: block;
+    margin-bottom: var(--space-2);
+    color: #1E40AF;
+}
+
+.tips-banner ul {
+    margin: 0;
+    padding-left: var(--space-5);
+    color: #1E40AF;
+}
+
+.tips-banner li {
+    margin-bottom: var(--space-1);
+}
+
+.tips-banner li:last-child {
+    margin-bottom: 0;
+}
+
+/* Bulk Import */
+.bulk-import {
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+.bulk-import summary {
+    font-weight: 500;
+}
+
+.bulk-import[open] summary {
+    margin-bottom: var(--space-2);
+}
+
+/* Empty State Inline */
+.empty-state-inline {
+    text-align: center;
+    padding: var(--space-8) var(--space-4);
+    background: var(--muted);
+    border-radius: var(--radius-md);
+}
+
+/* Tooltip Trigger */
+.tooltip-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    cursor: help;
+    margin-left: var(--space-1);
+}
+
+/* Mini Stats */
+.stats-mini {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+}
+
+.stat-mini {
+    text-align: center;
+    padding: var(--space-3);
+    background: var(--muted);
+    border-radius: var(--radius-md);
+}
+
+.stat-mini-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--foreground);
+}
+
+.stat-mini-label {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+
+/* Badge Warning */
+.badge-warning {
+    background: var(--warning-light);
+    color: #92400E;
+}
+
+/* Item Content (Study Builder) */
+.item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.item-name {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.item-description {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin-top: var(--space-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Survey Item Content */
+.survey-item-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-1);
+}
+
+.survey-item-name {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.survey-item-description {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
 }

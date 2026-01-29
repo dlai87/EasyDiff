@@ -109,7 +109,8 @@ def calculate_scores(study_items, answers):
     scores = {}
     for item in study_items:
         scores[item.id] = {
-            'text': item.text,
+            'name': item.name,
+            'description': item.description,
             'best_count': 0,
             'worst_count': 0,
             'appearances': 0,

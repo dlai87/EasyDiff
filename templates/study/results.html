@@ -48,7 +48,7 @@
                     {% for item_id, data in ranked_items %}
                         <li class="ranking-item">
                             <span class="ranking-position {{ 'top-3' if loop.index <= 3 else '' }}">{{ loop.index }}</span>
-                            <span class="ranking-text">{{ data.text }}</span>
+                            <span class="ranking-text">{{ data.name }}</span>
                             <span class="ranking-score">{{ data.normalized_score }}</span>
                             <div class="ranking-bar">
                                 <div class="ranking-bar-fill" style="width: {{ data.normalized_score }}%"></div>
@@ -83,7 +83,7 @@
                                 </div>
                                 <span class="text-xs text-muted" style="margin-left: 4px;">{{ data.best_count }}</span>
                             </div>
-                            <span class="tornado-label">{{ data.text[:25] }}{% if data.text|length > 25 %}...{% endif %}</span>
+                            <span class="tornado-label">{{ data.name[:25] }}{% if data.name|length > 25 %}...{% endif %}</span>
                             <div class="tornado-bar-container tornado-bar-right">
                                 <span class="text-xs text-muted" style="margin-right: 4px;">{{ data.worst_count }}</span>
                                 <div class="tornado-bar tornado-bar-worst" style="width: {{ (data.worst_count / max_count.value * 100) if max_count.value > 0 else 0 }}%; min-width: {{ '20px' if data.worst_count > 0 else '0' }};"></div>
@@ -128,7 +128,7 @@
                     {% for item_id, data in ranked_items %}
                         <tr>
                             <td>{{ loop.index }}</td>
-                            <td>{{ data.text }}</td>
+                            <td>{{ data.name }}</td>
                             <td><strong>{{ data.normalized_score }}</strong></td>
                             <td>{{ data.raw_score }}</td>
                             <td class="text-success">{{ data.best_count }}</td>

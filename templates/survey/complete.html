@@ -7,14 +7,23 @@
 {% block content %}
 <div class="survey-container">
     <div class="card text-center py-12">
-        <div style="font-size: 4rem; margin-bottom: var(--space-6);">✓</div>
-        <h1 class="mb-4">Thank You!</h1>
-        <p class="text-muted mb-6">
-            Your responses have been recorded. We appreciate your time and feedback.
-        </p>
-        <p class="text-sm text-muted">
-            You can close this window now.
-        </p>
+        {% if is_preview %}
+            <div style="font-size: 4rem; margin-bottom: var(--space-6);">👁️</div>
+            <h1 class="mb-4">Preview Complete</h1>
+            <p class="text-muted mb-6">
+                This was a preview. No responses were saved to results.
+            </p>
+            <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-primary">Return to Study</a>
+        {% else %}
+            <div style="font-size: 4rem; margin-bottom: var(--space-6);">✓</div>
+            <h1 class="mb-4">Thank You!</h1>
+            <p class="text-muted mb-6">
+                Your responses have been recorded. We appreciate your time and feedback.
+            </p>
+            <p class="text-sm text-muted">
+                You can close this window now.
+            </p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

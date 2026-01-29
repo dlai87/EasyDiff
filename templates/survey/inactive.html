@@ -10,13 +10,14 @@
         <div style="font-size: 4rem; margin-bottom: var(--space-6);">🔒</div>
         <h1 class="mb-4">Survey Unavailable</h1>
         <p class="text-muted">
-            This survey is not currently accepting responses.
             {% if study.status == 'DRAFT' %}
-                The study is still being prepared.
-            {% elif study.status == 'COMPLETED' %}
-                Data collection has been completed.
+                This survey is still being prepared and is not yet accepting responses.
+            {% elif study.status == 'CLOSED' %}
+                This survey is now closed and no longer accepting responses.
             {% elif study.status == 'ARCHIVED' %}
-                This study has been archived.
+                This survey has been archived.
+            {% else %}
+                This survey is not currently accepting responses.
             {% endif %}
         </p>
     </div>

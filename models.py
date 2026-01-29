@@ -33,11 +33,12 @@ class Study(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default='')
+    question_text = db.Column(db.String(500), default='Choose the Best and Worst from the following items')
     best_label = db.Column(db.String(50), default='Best')
     worst_label = db.Column(db.String(50), default='Worst')
     items_per_set = db.Column(db.Integer, default=4)
-    sets_per_respondent = db.Column(db.Integer, default=8)
-    status = db.Column(db.String(20), default='DRAFT')  # DRAFT, ACTIVE, COMPLETED, ARCHIVED
+    sets_per_respondent = db.Column(db.Integer, default=10)
+    status = db.Column(db.String(20), default='DRAFT')  # DRAFT, ACTIVE, CLOSED, ARCHIVED
     share_token = db.Column(db.String(32), unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -63,22 +64,39 @@ class Study(db.Model):
     def response_count(self):
         return self.responses.filter_by(completed_at=db.not_(None)).count()
 
+    @property
+    def completed_response_count(self):
+        """Count of completed responses."""
+        return self.responses.filter(Response.completed_at != None).count()
+
     def can_publish(self):
-        return self.item_count >= 4 and self.status == 'DRAFT'
+        return self.item_count >= 5 and self.status == 'DRAFT'
+
+    def is_accepting_responses(self):
+        """Check if study is currently accepting new responses."""
+        return self.status == 'ACTIVE'
 
 
 class Item(db.Model):
     __tablename__ = 'items'
 
     id = db.Column(db.Integer, primary_key=True)
-    text = db.Column(db.String(500), nullable=False)
+    name = db.Column(db.String(200), nullable=False)  # Required: short item name
+    description = db.Column(db.Text, nullable=True)   # Optional: longer description
     order = db.Column(db.Integer, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     study_id = db.Column(db.Integer, db.ForeignKey('studies.id'), nullable=False)
 
     def __repr__(self):
-        return f'<Item {self.text[:30]}>'
+        return f'<Item {self.name[:30]}>'
+
+    @property
+    def display_text(self):
+        """Return name with description if available."""
+        if self.description:
+            return f"{self.name}: {self.description}"
+        return self.name
 
 
 class Response(db.Model):
@@ -86,6 +104,7 @@ class Response(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     respondent_id = db.Column(db.String(36), nullable=False, index=True)  # UUID for anonymous tracking
+    is_preview = db.Column(db.Boolean, default=False)  # True if this is a preview response
     started_at = db.Column(db.DateTime, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
 

@@ -260,10 +260,11 @@ def study_edit(id):
         if action == 'update_metadata':
             study.name = request.form.get('name', '').strip() or study.name
             study.description = request.form.get('description', '').strip()
+            study.question_text = request.form.get('question_text', '').strip() or 'Choose the Best and Worst from the following items'
             study.best_label = request.form.get('best_label', 'Best').strip() or 'Best'
             study.worst_label = request.form.get('worst_label', 'Worst').strip() or 'Worst'
             study.items_per_set = int(request.form.get('items_per_set', 4))
-            study.sets_per_respondent = int(request.form.get('sets_per_respondent', 8))
+            study.sets_per_respondent = int(request.form.get('sets_per_respondent', 10))
 
             # Validate
             if study.items_per_set < 3:
@@ -273,30 +274,33 @@ def study_edit(id):
 
             if study.sets_per_respondent < 5:
                 study.sets_per_respondent = 5
-            elif study.sets_per_respondent > 15:
-                study.sets_per_respondent = 15
+            elif study.sets_per_respondent > 20:
+                study.sets_per_respondent = 20
 
             db.session.commit()
             flash('Study settings updated.', 'success')
 
         elif action == 'add_item':
-            text = request.form.get('item_text', '').strip()
-            if text:
+            item_name = request.form.get('item_name', '').strip()
+            item_description = request.form.get('item_description', '').strip()
+            if item_name:
                 max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
-                item = Item(text=text, order=max_order + 1, study_id=study.id)
+                item = Item(name=item_name, description=item_description or None, order=max_order + 1, study_id=study.id)
                 db.session.add(item)
                 db.session.commit()
                 flash('Item added.', 'success')
             else:
-                flash('Item text is required.', 'error')
+                flash('Item name is required.', 'error')
 
         elif action == 'update_item':
             item_id = request.form.get('item_id')
-            text = request.form.get('item_text', '').strip()
-            if item_id and text:
+            item_name = request.form.get('item_name', '').strip()
+            item_description = request.form.get('item_description', '').strip()
+            if item_id and item_name:
                 item = Item.query.filter_by(id=item_id, study_id=study.id).first()
                 if item:
-                    item.text = text
+                    item.name = item_name
+                    item.description = item_description or None
                     db.session.commit()
                     flash('Item updated.', 'success')
 
@@ -310,12 +314,24 @@ def study_edit(id):
                     flash('Item deleted.', 'success')
 
         elif action == 'publish':
-            if study.item_count >= 4:
+            if study.item_count >= 5:
                 study.status = 'ACTIVE'
                 db.session.commit()
                 flash('Study published! Share the link to collect responses.', 'success')
             else:
-                flash('You need at least 4 items to publish.', 'error')
+                flash('You need at least 5 items to publish.', 'error')
+
+        elif action == 'close':
+            if study.status == 'ACTIVE':
+                study.status = 'CLOSED'
+                db.session.commit()
+                flash('Study closed. No new responses will be accepted.', 'info')
+
+        elif action == 'reopen':
+            if study.status == 'CLOSED':
+                study.status = 'ACTIVE'
+                db.session.commit()
+                flash('Study reopened. Now accepting responses.', 'success')
 
         elif action == 'unpublish':
             study.status = 'DRAFT'
@@ -333,7 +349,59 @@ def study_edit(id):
     items = study.items.order_by(Item.order).all()
     share_url = url_for('survey_start', token=study.share_token, _external=True)
 
-    return render_template('study/edit.html', study=study, items=items, share_url=share_url)
+    # Calculate response stats for active/closed studies
+    response_stats = {
+        'total_started': Response.query.filter_by(study_id=study.id, is_preview=False).count(),
+        'completed': Response.query.filter_by(study_id=study.id, is_preview=False).filter(Response.completed_at != None).count()
+    }
+
+    return render_template('study/edit.html', study=study, items=items, share_url=share_url, response_stats=response_stats)
+
+
+@app.route('/study/<int:id>/bulk-import', methods=['POST'])
+@login_required
+def study_bulk_import(id):
+    """Import multiple items at once, one per line."""
+    study = Study.query.filter_by(id=id, user_id=current_user.id).first_or_404()
+
+    if study.status != 'DRAFT':
+        flash('Cannot add items to a published study.', 'error')
+        return redirect(url_for('study_edit', id=study.id))
+
+    items_text = request.form.get('items_text', '')
+    lines = [line.strip() for line in items_text.split('\n') if line.strip()]
+
+    if not lines:
+        flash('No items to import.', 'error')
+        return redirect(url_for('study_edit', id=study.id))
+
+    # Check if adding these would exceed max (30 items)
+    current_count = study.item_count
+    if current_count + len(lines) > 30:
+        flash(f'Cannot add {len(lines)} items. Maximum is 30 items total (currently have {current_count}).', 'error')
+        return redirect(url_for('study_edit', id=study.id))
+
+    max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
+
+    added = 0
+    for i, line in enumerate(lines):
+        # Support format: "Name | Description" or just "Name"
+        if '|' in line:
+            parts = line.split('|', 1)
+            item_name = parts[0].strip()[:200]
+            item_description = parts[1].strip() if len(parts) > 1 else None
+        else:
+            item_name = line[:200]
+            item_description = None
+
+        if item_name:
+            item = Item(name=item_name, description=item_description, order=max_order + i + 1, study_id=study.id)
+            db.session.add(item)
+            added += 1
+
+    db.session.commit()
+    flash(f'Successfully imported {added} items.', 'success')
+    return redirect(url_for('study_edit', id=study.id))
 
 
 @app.route('/study/<int:id>/results')
@@ -342,7 +410,8 @@ def study_results(id):
     study = Study.query.filter_by(id=id, user_id=current_user.id).first_or_404()
 
     items = study.items.all()
-    responses = study.responses.all()
+    # Exclude preview responses from results
+    responses = study.responses.filter_by(is_preview=False).all()
     completed_responses = [r for r in responses if r.completed_at]
 
     # Get all answers from completed responses
@@ -368,7 +437,8 @@ def study_export(id):
     study = Study.query.filter_by(id=id, user_id=current_user.id).first_or_404()
 
     items = study.items.all()
-    responses = study.responses.all()
+    # Exclude preview responses from export
+    responses = study.responses.filter_by(is_preview=False).all()
     completed_responses = [r for r in responses if r.completed_at]
 
     answers = []
@@ -412,6 +482,7 @@ def study_duplicate(id):
     new_study = Study(
         name=f"{study.name} (Copy)",
         description=study.description,
+        question_text=study.question_text,
         best_label=study.best_label,
         worst_label=study.worst_label,
         items_per_set=study.items_per_set,
@@ -423,7 +494,7 @@ def study_duplicate(id):
 
     # Copy items
     for item in study.items.all():
-        new_item = Item(text=item.text, order=item.order, study_id=new_study.id)
+        new_item = Item(name=item.name, description=item.description, order=item.order, study_id=new_study.id)
         db.session.add(new_item)
     db.session.commit()
 
@@ -447,21 +518,40 @@ def study_delete(id):
 def survey_start(token):
     study = Study.query.filter_by(share_token=token).first_or_404()
 
-    if study.status != 'ACTIVE':
+    # Check if this is a preview (DRAFT status)
+    is_preview = request.args.get('preview') == '1' or study.status == 'DRAFT'
+
+    # Only allow ACTIVE status or preview mode
+    if study.status not in ['ACTIVE', 'DRAFT']:
         return render_template('survey/inactive.html', study=study)
 
-    return render_template('survey/start.html', study=study, token=token)
+    # For DRAFT, check if user is the owner (must be logged in)
+    if study.status == 'DRAFT':
+        if not current_user.is_authenticated or study.user_id != current_user.id:
+            return render_template('survey/inactive.html', study=study)
+        is_preview = True
+
+    return render_template('survey/start.html', study=study, token=token, is_preview=is_preview)
 
 
 @app.route('/survey/<token>/begin', methods=['POST'])
 def survey_begin(token):
     study = Study.query.filter_by(share_token=token).first_or_404()
 
-    if study.status != 'ACTIVE':
+    # Check if preview mode
+    is_preview = study.status == 'DRAFT'
+
+    # Only allow ACTIVE or DRAFT (preview) status
+    if study.status not in ['ACTIVE', 'DRAFT']:
         return redirect(url_for('survey_start', token=token))
 
-    # Create new response
-    response = Response(study_id=study.id)
+    # For DRAFT preview, verify owner
+    if study.status == 'DRAFT':
+        if not current_user.is_authenticated or study.user_id != current_user.id:
+            return redirect(url_for('survey_start', token=token))
+
+    # Create new response (mark as preview if applicable)
+    response = Response(study_id=study.id, is_preview=is_preview)
     db.session.add(response)
     db.session.commit()
 
@@ -475,6 +565,7 @@ def survey_begin(token):
     session['survey_response_id'] = response.id
     session['survey_sets'] = sets
     session['survey_current_set'] = 0
+    session['survey_is_preview'] = is_preview
 
     return redirect(url_for('survey_question', token=token))
 
@@ -482,8 +573,10 @@ def survey_begin(token):
 @app.route('/survey/<token>/question', methods=['GET', 'POST'])
 def survey_question(token):
     study = Study.query.filter_by(share_token=token).first_or_404()
+    is_preview = session.get('survey_is_preview', False)
 
-    if study.status != 'ACTIVE':
+    # Allow ACTIVE or preview mode
+    if study.status not in ['ACTIVE', 'DRAFT'] and not is_preview:
         return redirect(url_for('survey_start', token=token))
 
     response_id = session.get('survey_response_id')
@@ -540,13 +633,15 @@ def survey_question(token):
                          token=token,
                          items=items,
                          current_set=current_set + 1,
-                         total_sets=len(sets))
+                         total_sets=len(sets),
+                         is_preview=is_preview)
 
 
 @app.route('/survey/<token>/complete')
 def survey_complete(token):
     study = Study.query.filter_by(share_token=token).first_or_404()
-    return render_template('survey/complete.html', study=study)
+    is_preview = session.pop('survey_is_preview', False)
+    return render_template('survey/complete.html', study=study, is_preview=is_preview)
 
 
 # ============== API Routes ==============
@@ -557,17 +652,18 @@ def api_add_item(id):
     study = Study.query.filter_by(id=id, user_id=current_user.id).first_or_404()
 
     data = request.get_json()
-    text = data.get('text', '').strip()
+    name = data.get('name', '').strip()
+    description = data.get('description', '').strip()
 
-    if not text:
-        return jsonify({'error': 'Item text is required'}), 400
+    if not name:
+        return jsonify({'error': 'Item name is required'}), 400
 
     max_order = db.session.query(db.func.max(Item.order)).filter_by(study_id=study.id).scalar() or 0
-    item = Item(text=text, order=max_order + 1, study_id=study.id)
+    item = Item(name=name, description=description or None, order=max_order + 1, study_id=study.id)
     db.session.add(item)
     db.session.commit()
 
-    return jsonify({'id': item.id, 'text': item.text, 'order': item.order})
+    return jsonify({'id': item.id, 'name': item.name, 'description': item.description, 'order': item.order})
 
 
 @app.route('/api/study/<int:id>/items/<int:item_id>', methods=['PUT', 'DELETE'])
@@ -583,12 +679,14 @@ def api_item(id, item_id):
 
     if request.method == 'PUT':
         data = request.get_json()
-        text = data.get('text', '').strip()
-        if text:
-            item.text = text
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        if name:
+            item.name = name
+            item.description = description or None
             db.session.commit()
-            return jsonify({'id': item.id, 'text': item.text})
-        return jsonify({'error': 'Item text is required'}), 400
+            return jsonify({'id': item.id, 'name': item.name, 'description': item.description})
+        return jsonify({'error': 'Item name is required'}), 400
 
 
 if __name__ == '__main__':

@@ -6,6 +6,12 @@
 
 {% block content %}
 <div class="survey-container">
+    {% if is_preview %}
+    <div class="alert alert-warning mb-4">
+        <strong>Preview Mode</strong> - Responses will not be saved to results.
+    </div>
+    {% endif %}
+
     <div class="survey-header">
         <h1 class="text-lg font-semibold">{{ study.name }}</h1>
     </div>
@@ -21,7 +27,7 @@
 
     <div class="survey-question">
         <div class="survey-instruction">
-            <p>Select your <strong class="text-success">{{ study.best_label }}</strong> and <strong class="text-danger">{{ study.worst_label }}</strong> from these options:</p>
+            <p>{{ study.question_text }}</p>
         </div>
 
         <form method="POST" action="{{ url_for('survey_question', token=token) }}" id="survey-form">
@@ -36,7 +42,12 @@
                                 data-item-id="{{ item.id }}">
                             {{ study.best_label }}
                         </button>
-                        <span class="survey-item-text">{{ item.text }}</span>
+                        <div class="survey-item-content">
+                            <span class="survey-item-name">{{ item.name }}</span>
+                            {% if item.description %}
+                                <span class="survey-item-description">{{ item.description }}</span>
+                            {% endif %}
+                        </div>
                         <button type="button"
                                 class="survey-btn survey-btn-worst"
                                 data-item-id="{{ item.id }}">

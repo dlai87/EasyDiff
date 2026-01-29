@@ -15,65 +15,146 @@
         </div>
 
         <div class="flex gap-2">
-            {% if study.status == 'DRAFT' and study.item_count >= 4 %}
-                <form method="POST" style="display: inline;">
-                    <input type="hidden" name="action" value="publish">
-                    <button type="submit" class="btn btn-success">Publish</button>
-                </form>
+            {% if study.status == 'DRAFT' %}
+                {% if study.item_count >= 5 %}
+                    <a href="{{ url_for('survey_start', token=study.share_token) }}" target="_blank" class="btn btn-secondary">Preview Survey</a>
+                    <form method="POST" style="display: inline;">
+                        <input type="hidden" name="action" value="publish">
+                        <button type="submit" class="btn btn-success">Publish Study</button>
+                    </form>
+                {% else %}
+                    <span class="btn btn-secondary" style="opacity: 0.5; cursor: not-allowed;">Preview (need 5+ items)</span>
+                {% endif %}
             {% elif study.status == 'ACTIVE' %}
                 <a href="{{ url_for('survey_start', token=study.share_token) }}" target="_blank" class="btn btn-secondary">Preview</a>
+                <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary">View Results</a>
+            {% elif study.status == 'CLOSED' %}
+                <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary">View Results</a>
             {% endif %}
         </div>
     </div>
 
-    <div class="grid" style="grid-template-columns: 1fr 350px; gap: var(--space-6);">
+    <!-- Study Progress/Checklist -->
+    {% if study.status == 'DRAFT' %}
+    <div class="card mb-6 setup-checklist">
+        <h3 class="card-title mb-4">Setup Checklist</h3>
+        <div class="checklist-items">
+            <div class="checklist-item {{ 'completed' if study.item_count >= 5 else 'pending' }}">
+                <span class="checklist-icon">{{ '✓' if study.item_count >= 5 else '○' }}</span>
+                <span class="checklist-text">Add at least 5 items to compare</span>
+                <span class="checklist-status">{{ study.item_count }}/5 minimum</span>
+            </div>
+            <div class="checklist-item {{ 'completed' if study.item_count >= 7 else 'pending' }}">
+                <span class="checklist-icon">{{ '✓' if study.item_count >= 7 else '○' }}</span>
+                <span class="checklist-text">Recommended: 7-25 items for best results</span>
+                <span class="checklist-status">{{ study.item_count }} items</span>
+            </div>
+            <div class="checklist-item {{ 'warning' if study.item_count > 25 else 'completed' if study.item_count >= 5 else 'pending' }}">
+                <span class="checklist-icon">{{ '⚠' if study.item_count > 25 else '✓' if study.item_count >= 5 else '○' }}</span>
+                <span class="checklist-text">Keep under 30 items maximum</span>
+                <span class="checklist-status">{{ study.item_count }}/30 max</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="grid" style="grid-template-columns: 1fr 380px; gap: var(--space-6);">
         <!-- Main Content: Items -->
         <div>
             <div class="card mb-6">
                 <div class="card-header flex justify-between items-center">
                     <div>
-                        <h2 class="card-title">Items</h2>
-                        <p class="card-description">Add the options you want to compare (minimum 4)</p>
+                        <h2 class="card-title">Items to Compare</h2>
+                        <p class="card-description">Add the features, options, or attributes you want respondents to evaluate</p>
                     </div>
-                    <span class="badge badge-{{ 'active' if study.item_count >= 4 else 'draft' }}">
-                        {{ study.item_count }} items
+                    <span class="badge badge-{{ 'active' if study.item_count >= 5 else 'warning' if study.item_count > 0 else 'draft' }}">
+                        {{ study.item_count }} item{{ 's' if study.item_count != 1 else '' }}
                     </span>
                 </div>
 
+                <!-- Tips Banner -->
+                <div class="tips-banner mb-4">
+                    <strong>Tips for good items:</strong>
+                    <ul>
+                        <li>Keep item names concise and clear (aim for under 10 words)</li>
+                        <li>Use the description field for additional context if needed</li>
+                        <li>Make items mutually exclusive and distinct</li>
+                    </ul>
+                </div>
+
                 <!-- Add Item Form -->
+                {% if study.status == 'DRAFT' %}
                 <form method="POST" id="item-form" class="mb-4">
                     <input type="hidden" name="action" value="add_item">
+                    <div class="form-group mb-2">
+                        <input
+                            type="text"
+                            name="item_name"
+                            id="item-input"
+                            class="form-input"
+                            placeholder="Item name (required)"
+                            maxlength="200"
+                            required
+                        >
+                    </div>
                     <div class="flex gap-2">
                         <input
                             type="text"
-                            name="item_text"
-                            id="item-input"
+                            name="item_description"
                             class="form-input"
-                            placeholder="Enter an item..."
-                            {% if study.status != 'DRAFT' %}disabled{% endif %}
+                            placeholder="Description (optional)"
                         >
-                        <button type="submit" class="btn btn-primary" {% if study.status != 'DRAFT' %}disabled{% endif %}>Add</button>
+                        <button type="submit" class="btn btn-primary">Add Item</button>
                     </div>
                 </form>
+
+                <!-- Bulk Import -->
+                <details class="bulk-import mb-4">
+                    <summary class="text-sm text-primary" style="cursor: pointer;">+ Add multiple items at once</summary>
+                    <form method="POST" action="{{ url_for('study_bulk_import', id=study.id) }}" class="mt-3">
+                        <textarea
+                            name="items_text"
+                            class="form-textarea"
+                            rows="5"
+                            placeholder="Enter one item per line. Use | to separate name and description.
+
+Example:
+Fast delivery
+Easy returns | 30-day hassle-free return policy
+24/7 support | Round-the-clock customer service
+Competitive pricing"
+                        ></textarea>
+                        <button type="submit" class="btn btn-secondary mt-2">Import Items</button>
+                    </form>
+                </details>
+                {% endif %}
 
                 <!-- Items List -->
                 {% if items %}
                     <ul class="item-list">
                         {% for item in items %}
-                            <li class="item-row">
+                            <li class="item-row" data-item-id="{{ item.id }}">
                                 <span class="item-number">{{ loop.index }}</span>
-                                <span class="item-text">{{ item.text }}</span>
+                                <div class="item-content">
+                                    <span class="item-name">{{ item.name }}</span>
+                                    {% if item.description %}
+                                        <span class="item-description">{{ item.description }}</span>
+                                    {% endif %}
+                                </div>
                                 {% if study.status == 'DRAFT' %}
                                     <div class="item-actions">
                                         <button
                                             type="button"
                                             class="btn btn-ghost btn-sm item-edit-btn"
                                             data-item-id="{{ item.id }}"
+                                            data-item-name="{{ item.name }}"
+                                            data-item-description="{{ item.description or '' }}"
+                                            title="Edit item"
                                         >Edit</button>
                                         <form method="POST" style="display: inline;" data-confirm="Delete this item?">
                                             <input type="hidden" name="action" value="delete_item">
                                             <input type="hidden" name="item_id" value="{{ item.id }}">
-                                            <button type="submit" class="btn btn-ghost btn-sm text-danger">Delete</button>
+                                            <button type="submit" class="btn btn-ghost btn-sm text-danger" title="Delete item">Delete</button>
                                         </form>
                                     </div>
                                 {% endif %}
@@ -81,17 +162,21 @@
                         {% endfor %}
                     </ul>
                 {% else %}
-                    <p class="text-muted text-sm text-center py-8">No items yet. Add at least 4 items to publish your study.</p>
+                    <div class="empty-state-inline">
+                        <p class="text-muted">No items yet. Add at least 5 items to publish your study.</p>
+                        <p class="text-xs text-muted mt-2">Tip: Start with your most important features or options</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- Sidebar: Settings -->
+        <!-- Sidebar: Settings & Info -->
         <div>
             <!-- Share Link (if active) -->
             {% if study.status == 'ACTIVE' %}
                 <div class="card mb-4">
-                    <h3 class="card-title mb-3">Share Link</h3>
+                    <h3 class="card-title mb-3">Share Your Survey</h3>
+                    <p class="text-sm text-muted mb-3">Send this link to collect responses:</p>
                     <div class="share-link-container">
                         <input
                             type="text"
@@ -100,14 +185,17 @@
                             value="{{ share_url }}"
                             readonly
                         >
-                        <button type="button" class="btn btn-secondary" data-copy="share-url">Copy</button>
+                        <button type="button" class="btn btn-primary" data-copy="share-url">Copy</button>
                     </div>
+                    <p class="text-xs text-muted mt-2">Recommended: Collect at least 50 responses for reliable results</p>
                 </div>
             {% endif %}
 
-            <!-- Study Settings -->
+            <!-- Survey Configuration -->
             <div class="card mb-4">
-                <h3 class="card-title mb-4">Settings</h3>
+                <h3 class="card-title mb-2">Survey Configuration</h3>
+                <p class="text-sm text-muted mb-4">These settings determine how your survey is presented to respondents</p>
+
                 <form method="POST">
                     <input type="hidden" name="action" value="update_metadata">
 
@@ -123,62 +211,114 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="description" class="form-label">Description</label>
+                        <label for="description" class="form-label">
+                            Study Description
+                            <span class="text-muted text-xs">(shown on start page)</span>
+                        </label>
                         <textarea
                             id="description"
                             name="description"
                             class="form-textarea"
                             rows="2"
+                            placeholder="Brief context for respondents..."
                         >{{ study.description }}</textarea>
                     </div>
 
-                    <div class="grid grid-2 gap-4">
-                        <div class="form-group">
-                            <label for="best_label" class="form-label">Best Label</label>
-                            <input
-                                type="text"
-                                id="best_label"
-                                name="best_label"
-                                class="form-input"
-                                value="{{ study.best_label }}"
-                            >
-                        </div>
-                        <div class="form-group">
-                            <label for="worst_label" class="form-label">Worst Label</label>
-                            <input
-                                type="text"
-                                id="worst_label"
-                                name="worst_label"
-                                class="form-input"
-                                value="{{ study.worst_label }}"
-                            >
+                    <div class="form-group">
+                        <label for="question_text" class="form-label">
+                            Question Text
+                            <span class="text-muted text-xs">(shown on each question)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="question_text"
+                            name="question_text"
+                            class="form-input"
+                            value="{{ study.question_text }}"
+                            placeholder="Choose the Best and Worst from the following items"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Selection Labels</label>
+                        <p class="form-hint mb-2">Customize how choices are labeled</p>
+                        <div class="grid grid-2 gap-3">
+                            <div>
+                                <input
+                                    type="text"
+                                    id="best_label"
+                                    name="best_label"
+                                    class="form-input"
+                                    value="{{ study.best_label }}"
+                                    placeholder="Best"
+                                >
+                                <p class="form-hint text-success">Most preferred</p>
+                            </div>
+                            <div>
+                                <input
+                                    type="text"
+                                    id="worst_label"
+                                    name="worst_label"
+                                    class="form-input"
+                                    value="{{ study.worst_label }}"
+                                    placeholder="Worst"
+                                >
+                                <p class="form-hint text-danger">Least preferred</p>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="grid grid-2 gap-4">
-                        <div class="form-group">
-                            <label for="items_per_set" class="form-label">Items Per Set</label>
-                            <select id="items_per_set" name="items_per_set" class="form-select">
-                                <option value="3" {{ 'selected' if study.items_per_set == 3 }}>3 items</option>
-                                <option value="4" {{ 'selected' if study.items_per_set == 4 }}>4 items</option>
-                                <option value="5" {{ 'selected' if study.items_per_set == 5 }}>5 items</option>
-                            </select>
-                            <p class="form-hint">Shown in each question</p>
-                        </div>
-                        <div class="form-group">
-                            <label for="sets_per_respondent" class="form-label">Questions</label>
-                            <select id="sets_per_respondent" name="sets_per_respondent" class="form-select">
-                                {% for i in range(5, 16) %}
-                                    <option value="{{ i }}" {{ 'selected' if study.sets_per_respondent == i }}>{{ i }} questions</option>
-                                {% endfor %}
-                            </select>
-                            <p class="form-hint">Per respondent</p>
-                        </div>
+                    <div class="form-group">
+                        <label for="items_per_set" class="form-label">
+                            Items Per Question
+                            <span class="tooltip-trigger" title="How many items are shown in each question. 4 is recommended for optimal efficiency.">ⓘ</span>
+                        </label>
+                        <select id="items_per_set" name="items_per_set" class="form-select">
+                            <option value="3" {{ 'selected' if study.items_per_set == 3 }}>3 items (faster, less precise)</option>
+                            <option value="4" {{ 'selected' if study.items_per_set == 4 }}>4 items (recommended)</option>
+                            <option value="5" {{ 'selected' if study.items_per_set == 5 }}>5 items (more precise, slower)</option>
+                        </select>
                     </div>
 
-                    <button type="submit" class="btn btn-secondary w-full">Save Settings</button>
+                    <div class="form-group">
+                        <label for="sets_per_respondent" class="form-label">
+                            Questions Per Respondent
+                            <span class="tooltip-trigger" title="More questions = more reliable data, but longer survey. Each item should appear about 3 times.">ⓘ</span>
+                        </label>
+                        <select id="sets_per_respondent" name="sets_per_respondent" class="form-select">
+                            {% for i in range(5, 21) %}
+                                <option value="{{ i }}" {{ 'selected' if study.sets_per_respondent == i }}>{{ i }} questions{% if i == 10 %} (recommended){% endif %}</option>
+                            {% endfor %}
+                        </select>
+                        <p class="form-hint" id="sets-recommendation">
+                            {% if study.item_count > 0 %}
+                                Each item will appear ~{{ ((study.sets_per_respondent * study.items_per_set) / study.item_count) | round(1) }} times per respondent
+                            {% else %}
+                                Add items to see appearance frequency
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <button type="submit" class="btn btn-secondary w-full">Save Configuration</button>
                 </form>
             </div>
+
+            <!-- Study Stats (if active or closed) -->
+            {% if study.status in ['ACTIVE', 'CLOSED'] %}
+            <div class="card mb-4">
+                <h3 class="card-title mb-3">Response Stats</h3>
+                <div class="stats-mini">
+                    <div class="stat-mini">
+                        <span class="stat-mini-value">{{ response_stats.total_started }}</span>
+                        <span class="stat-mini-label">Total Started</span>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-value">{{ response_stats.completed }}</span>
+                        <span class="stat-mini-label">Completed</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Study Actions -->
             <div class="card">
@@ -187,21 +327,29 @@
                     {% if study.status == 'ACTIVE' %}
                         <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-secondary w-full">View Results</a>
                         <form method="POST">
-                            <input type="hidden" name="action" value="unpublish">
-                            <button type="submit" class="btn btn-secondary w-full">Move to Draft</button>
+                            <input type="hidden" name="action" value="close">
+                            <button type="submit" class="btn btn-secondary w-full">Close Study</button>
                         </form>
+                        <p class="text-xs text-muted text-center">Close study to stop accepting new responses</p>
+                    {% elif study.status == 'CLOSED' %}
+                        <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-secondary w-full">View Results</a>
+                        <form method="POST">
+                            <input type="hidden" name="action" value="reopen">
+                            <button type="submit" class="btn btn-secondary w-full">Reopen Study</button>
+                        </form>
+                        <p class="text-xs text-muted text-center">Reopen to accept new responses</p>
                     {% endif %}
 
                     <a href="{{ url_for('study_duplicate', id=study.id) }}" class="btn btn-secondary w-full">Duplicate Study</a>
 
-                    {% if study.status != 'ARCHIVED' %}
-                        <form method="POST" data-confirm="Archive this study?">
+                    {% if study.status not in ['ARCHIVED'] %}
+                        <form method="POST" data-confirm="Archive this study? You can still view results but won't collect new responses.">
                             <input type="hidden" name="action" value="archive">
-                            <button type="submit" class="btn btn-ghost w-full">Archive</button>
+                            <button type="submit" class="btn btn-ghost w-full">Archive Study</button>
                         </form>
                     {% endif %}
 
-                    <form method="POST" action="{{ url_for('study_delete', id=study.id) }}" data-confirm="Delete this study? This cannot be undone.">
+                    <form method="POST" action="{{ url_for('study_delete', id=study.id) }}" data-confirm="Delete this study permanently? All items and responses will be lost.">
                         <button type="submit" class="btn btn-ghost w-full text-danger">Delete Study</button>
                     </form>
                 </div>
@@ -209,4 +357,101 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Item Modal -->
+<div id="edit-item-modal" class="modal-backdrop hidden">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Item</h3>
+        </div>
+        <form method="POST" id="edit-item-form">
+            <input type="hidden" name="action" value="update_item">
+            <input type="hidden" name="item_id" id="edit-item-id">
+            <div class="form-group">
+                <label for="edit-item-name" class="form-label">Item Name</label>
+                <input type="text" id="edit-item-name" name="item_name" class="form-input" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-item-description" class="form-label">Description (optional)</label>
+                <textarea id="edit-item-description" name="item_description" class="form-textarea" rows="2"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Update sets recommendation dynamically
+const itemsPerSetSelect = document.getElementById('items_per_set');
+const setsSelect = document.getElementById('sets_per_respondent');
+const recommendation = document.getElementById('sets-recommendation');
+const itemCount = {{ study.item_count }};
+
+function updateRecommendation() {
+    if (itemCount > 0) {
+        const itemsPerSet = parseInt(itemsPerSetSelect.value);
+        const sets = parseInt(setsSelect.value);
+        const appearances = ((sets * itemsPerSet) / itemCount).toFixed(1);
+        recommendation.textContent = `Each item will appear ~${appearances} times per respondent`;
+
+        if (appearances < 2) {
+            recommendation.style.color = 'var(--danger)';
+            recommendation.textContent += ' (too few - increase questions)';
+        } else if (appearances > 5) {
+            recommendation.style.color = 'var(--warning)';
+            recommendation.textContent += ' (many repetitions)';
+        } else {
+            recommendation.style.color = 'var(--success)';
+            recommendation.textContent += ' (good balance)';
+        }
+    }
+}
+
+if (itemsPerSetSelect && setsSelect) {
+    itemsPerSetSelect.addEventListener('change', updateRecommendation);
+    setsSelect.addEventListener('change', updateRecommendation);
+    updateRecommendation();
+}
+
+// Edit Item Modal
+const editModal = document.getElementById('edit-item-modal');
+const editForm = document.getElementById('edit-item-form');
+const editItemId = document.getElementById('edit-item-id');
+const editItemName = document.getElementById('edit-item-name');
+const editItemDescription = document.getElementById('edit-item-description');
+
+document.querySelectorAll('.item-edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const itemId = this.dataset.itemId;
+        const itemName = this.dataset.itemName;
+        const itemDescription = this.dataset.itemDescription;
+
+        editItemId.value = itemId;
+        editItemName.value = itemName;
+        editItemDescription.value = itemDescription;
+        editModal.classList.remove('hidden');
+    });
+});
+
+function closeEditModal() {
+    editModal.classList.add('hidden');
+}
+
+editModal.addEventListener('click', function(e) {
+    if (e.target === editModal) {
+        closeEditModal();
+    }
+});
+
+// Auto-focus on item name input
+const itemInput = document.getElementById('item-input');
+if (itemInput) {
+    itemInput.focus();
+}
+</script>
 {% endblock %}

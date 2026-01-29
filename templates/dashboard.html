@@ -23,6 +23,10 @@
            class="filter-tab {{ 'active' if status_filter == 'active' else '' }}">
             Active
         </a>
+        <a href="{{ url_for('dashboard', status='closed') }}"
+           class="filter-tab {{ 'active' if status_filter == 'closed' else '' }}">
+            Closed
+        </a>
         <a href="{{ url_for('dashboard', status='completed') }}"
            class="filter-tab {{ 'active' if status_filter == 'completed' else '' }}">
             Completed
@@ -55,6 +59,9 @@
                         {% if study.status == 'DRAFT' %}
                             <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-primary btn-sm">Edit</a>
                         {% elif study.status == 'ACTIVE' %}
+                            <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary btn-sm">Results</a>
+                            <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-secondary btn-sm">Settings</a>
+                        {% elif study.status == 'CLOSED' %}
                             <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary btn-sm">Results</a>
                             <a href="{{ url_for('study_edit', id=study.id) }}" class="btn btn-secondary btn-sm">Settings</a>
                         {% else %}
