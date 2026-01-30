@@ -331,6 +331,36 @@ def study_edit(id):
             else:
                 flash('You need at least 5 items to publish.', 'error')
 
+        elif action == 'save_and_publish':
+            # Save configuration first
+            study.name = request.form.get('name', '').strip() or study.name
+            study.description = request.form.get('description', '').strip()
+            study.question_text = request.form.get('question_text', '').strip() or 'Choose the Best and Worst from the following items'
+            study.best_label = request.form.get('best_label', 'Best').strip() or 'Best'
+            study.worst_label = request.form.get('worst_label', 'Worst').strip() or 'Worst'
+            study.items_per_set = int(request.form.get('items_per_set', 4))
+            study.sets_per_respondent = int(request.form.get('sets_per_respondent', 10))
+
+            # Validate
+            if study.items_per_set < 3:
+                study.items_per_set = 3
+            elif study.items_per_set > 5:
+                study.items_per_set = 5
+
+            if study.sets_per_respondent < 5:
+                study.sets_per_respondent = 5
+            elif study.sets_per_respondent > 20:
+                study.sets_per_respondent = 20
+
+            # Then publish
+            if study.item_count >= 5:
+                study.status = 'ACTIVE'
+                db.session.commit()
+                flash('Study published! Share the link to collect responses.', 'success')
+            else:
+                db.session.commit()
+                flash('Configuration saved, but you need at least 5 items to publish.', 'error')
+
         elif action == 'close':
             if study.status == 'ACTIVE':
                 study.status = 'CLOSED'

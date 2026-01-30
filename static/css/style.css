@@ -848,7 +848,8 @@ a:hover {
 }
 
 .survey-btn {
-    width: 70px;
+    min-width: 60px;
+    width: auto;
     padding: var(--space-2) var(--space-3);
     font-size: 0.75rem;
     font-weight: 600;
@@ -857,6 +858,7 @@ a:hover {
     cursor: pointer;
     transition: all var(--transition-fast);
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .survey-btn-best {

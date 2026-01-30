@@ -17,16 +17,13 @@
         <div class="flex gap-2">
             {% if study.status == 'DRAFT' %}
                 {% if study.item_count >= 5 %}
-                    <a href="{{ url_for('survey_start', token=study.share_token) }}" target="_blank" class="btn btn-secondary">Preview Survey</a>
-                    <form method="POST" style="display: inline;">
-                        <input type="hidden" name="action" value="publish">
-                        <button type="submit" class="btn btn-success">Publish Study</button>
-                    </form>
+                    <button type="button" id="preview-btn" class="btn btn-secondary" data-preview-url="{{ url_for('survey_start', token=study.share_token) }}">Preview Survey</button>
+                    <button type="button" id="publish-btn" class="btn btn-success">Publish Study</button>
                 {% else %}
                     <span class="btn btn-secondary" style="opacity: 0.5; cursor: not-allowed;">Preview (need 5+ items)</span>
                 {% endif %}
             {% elif study.status == 'ACTIVE' %}
-                <a href="{{ url_for('survey_start', token=study.share_token) }}" target="_blank" class="btn btn-secondary">Preview</a>
+                <button type="button" id="preview-btn" class="btn btn-secondary" data-preview-url="{{ url_for('survey_start', token=study.share_token) }}">Preview</button>
                 <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary">View Results</a>
             {% elif study.status == 'CLOSED' %}
                 <a href="{{ url_for('study_results', id=study.id) }}" class="btn btn-primary">View Results</a>
@@ -178,8 +175,8 @@ Competitive pricing"
                 <h3 class="card-title mb-2">Survey Configuration</h3>
                 <p class="text-sm text-muted mb-4">These settings determine how your survey is presented to respondents</p>
 
-                <form method="POST">
-                    <input type="hidden" name="action" value="update_metadata">
+                <form method="POST" id="config-form">
+                    <input type="hidden" name="action" id="config-action" value="update_metadata">
 
                     <div class="form-group">
                         <label for="name" class="form-label">Study Name</label>
@@ -272,7 +269,7 @@ Competitive pricing"
                         {% if recommended > 20 %}{% set recommended = 20 %}{% endif %}
                         <select id="sets_per_respondent" name="sets_per_respondent" class="form-select">
                             {% for i in range(5, 21) %}
-                                <option value="{{ i }}" {{ 'selected' if i == recommended }}>{{ i }} questions</option>
+                                <option value="{{ i }}" {{ 'selected' if i == study.sets_per_respondent }}>{{ i }} questions</option>
                             {% endfor %}
                         </select>
                         <p class="form-hint" id="sets-recommendation">
@@ -284,7 +281,6 @@ Competitive pricing"
                         </p>
                     </div>
 
-                    <button type="submit" class="btn btn-secondary w-full">Save Configuration</button>
                 </form>
             </div>
 
@@ -491,6 +487,48 @@ editModal.addEventListener('click', function(e) {
 const itemInput = document.getElementById('item-input');
 if (itemInput) {
     itemInput.focus();
+}
+
+// Preview button handler - saves config first, then opens preview
+const previewBtn = document.getElementById('preview-btn');
+if (previewBtn) {
+    previewBtn.addEventListener('click', async function() {
+        const configForm = document.getElementById('config-form');
+        const previewUrl = this.dataset.previewUrl;
+
+        if (configForm) {
+            // Save config via fetch before opening preview
+            const formData = new FormData(configForm);
+            formData.set('action', 'update_metadata');
+
+            try {
+                await fetch(window.location.href, {
+                    method: 'POST',
+                    body: formData
+                });
+            } catch (e) {
+                // Continue to preview even if save fails
+                console.error('Failed to save config:', e);
+            }
+        }
+
+        // Open preview in new tab
+        window.open(previewUrl, '_blank');
+    });
+}
+
+// Publish button handler - saves config and publishes in one action
+const publishBtn = document.getElementById('publish-btn');
+if (publishBtn) {
+    publishBtn.addEventListener('click', function() {
+        const configForm = document.getElementById('config-form');
+        const actionInput = document.getElementById('config-action');
+        if (configForm && actionInput) {
+            // Change action to save_and_publish which will save config AND publish
+            actionInput.value = 'save_and_publish';
+            configForm.submit();
+        }
+    });
 }
 </script>
 {% endblock %}
