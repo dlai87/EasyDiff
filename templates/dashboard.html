@@ -27,14 +27,6 @@
            class="filter-tab {{ 'active' if status_filter == 'closed' else '' }}">
             Closed
         </a>
-        <a href="{{ url_for('dashboard', status='completed') }}"
-           class="filter-tab {{ 'active' if status_filter == 'completed' else '' }}">
-            Completed
-        </a>
-        <a href="{{ url_for('dashboard', status='archived') }}"
-           class="filter-tab {{ 'active' if status_filter == 'archived' else '' }}">
-            Archived
-        </a>
     </div>
 
     {% if studies %}

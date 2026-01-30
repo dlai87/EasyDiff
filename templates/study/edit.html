@@ -267,9 +267,10 @@ Competitive pricing"
                         {% set recommended = ((3 * study.item_count / study.items_per_set) | round | int) if study.item_count > 0 else 10 %}
                         {% if recommended < 5 %}{% set recommended = 5 %}{% endif %}
                         {% if recommended > 20 %}{% set recommended = 20 %}{% endif %}
+                        {% set selected_value = recommended if study.sets_per_respondent == 10 else study.sets_per_respondent %}
                         <select id="sets_per_respondent" name="sets_per_respondent" class="form-select">
                             {% for i in range(5, 21) %}
-                                <option value="{{ i }}" {{ 'selected' if i == study.sets_per_respondent }}>{{ i }} questions</option>
+                                <option value="{{ i }}" {{ 'selected' if i == selected_value }}>{{ i }} questions{% if i == recommended %} (Recommended){% endif %}</option>
                             {% endfor %}
                         </select>
                         <p class="form-hint" id="sets-recommendation">
@@ -322,13 +323,6 @@ Competitive pricing"
                     {% endif %}
 
                     <a href="{{ url_for('study_duplicate', id=study.id) }}" class="btn btn-secondary w-full">Duplicate Study</a>
-
-                    {% if study.status not in ['ARCHIVED'] %}
-                        <form method="POST" data-confirm="Archive this study? You can still view results but won't collect new responses.">
-                            <input type="hidden" name="action" value="archive">
-                            <button type="submit" class="btn btn-ghost w-full">Archive Study</button>
-                        </form>
-                    {% endif %}
 
                     <form method="POST" action="{{ url_for('study_delete', id=study.id) }}" data-confirm="Delete this study permanently? All items and responses will be lost.">
                         <button type="submit" class="btn btn-ghost w-full text-danger">Delete Study</button>
@@ -435,11 +429,24 @@ function updateRecommendation() {
     }
 }
 
+function updateRecommendedLabels() {
+    const itemsPerSet = parseInt(itemsPerSetSelect.value);
+    const recommended = calculateRecommendedSets(itemsPerSet);
+
+    // Update option labels to show "(Recommended)" for the recommended value
+    Array.from(setsSelect.options).forEach(option => {
+        const value = parseInt(option.value);
+        const baseText = `${value} questions`;
+        option.textContent = value === recommended ? `${baseText} (Recommended)` : baseText;
+    });
+}
+
 function autoSelectRecommended() {
     if (itemCount > 0) {
         const itemsPerSet = parseInt(itemsPerSetSelect.value);
         const recommended = calculateRecommendedSets(itemsPerSet);
         setsSelect.value = recommended;
+        updateRecommendedLabels();
         updateRecommendation();
     }
 }

@@ -38,7 +38,7 @@ class Study(db.Model):
     worst_label = db.Column(db.String(50), default='Worst')
     items_per_set = db.Column(db.Integer, default=4)
     sets_per_respondent = db.Column(db.Integer, default=10)
-    status = db.Column(db.String(20), default='DRAFT')  # DRAFT, ACTIVE, CLOSED, ARCHIVED
+    status = db.Column(db.String(20), default='DRAFT')  # DRAFT, ACTIVE, CLOSED
     share_token = db.Column(db.String(32), unique=True, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

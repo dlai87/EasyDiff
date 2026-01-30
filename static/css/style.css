@@ -489,16 +489,6 @@ a:hover {
     color: #166534;
 }
 
-.badge-completed {
-    background: #DBEAFE;
-    color: #1E40AF;
-}
-
-.badge-archived {
-    background: var(--muted);
-    color: var(--muted-foreground);
-}
-
 .badge-closed {
     background: var(--warning-light);
     color: #92400E;

@@ -378,12 +378,6 @@ def study_edit(id):
             db.session.commit()
             flash('Study moved back to draft.', 'info')
 
-        elif action == 'archive':
-            study.status = 'ARCHIVED'
-            db.session.commit()
-            flash('Study archived.', 'info')
-            return redirect(url_for('dashboard'))
-
         return redirect(url_for('study_edit', id=study.id))
 
     items = study.items.order_by(Item.order).all()
