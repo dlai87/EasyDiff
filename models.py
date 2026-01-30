@@ -62,12 +62,13 @@ class Study(db.Model):
 
     @property
     def response_count(self):
-        return self.responses.filter_by(completed_at=db.not_(None)).count()
+        """Count of non-preview responses."""
+        return self.responses.filter_by(is_preview=False).count()
 
     @property
     def completed_response_count(self):
-        """Count of completed responses."""
-        return self.responses.filter(Response.completed_at != None).count()
+        """Count of completed non-preview responses."""
+        return self.responses.filter_by(is_preview=False).filter(Response.completed_at != None).count()
 
     def can_publish(self):
         return self.item_count >= 5 and self.status == 'DRAFT'

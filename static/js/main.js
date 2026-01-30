@@ -94,9 +94,19 @@ function initSurveySelection() {
     // Form validation
     function validateSurveyForm() {
         const submitBtn = document.getElementById('survey-submit');
+        const submitHint = document.getElementById('submit-hint');
         if (submitBtn) {
             const isValid = bestInput.value && worstInput.value && bestInput.value !== worstInput.value;
             submitBtn.disabled = !isValid;
+
+            // Show/hide hint based on validation state
+            if (submitHint) {
+                if (isValid) {
+                    submitHint.classList.add('hidden');
+                } else {
+                    submitHint.classList.remove('hidden');
+                }
+            }
         }
     }
 

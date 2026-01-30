@@ -890,6 +890,18 @@ a:hover {
     text-align: center;
 }
 
+.survey-submit-hint {
+    margin-top: var(--space-3);
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    transition: opacity var(--transition-fast);
+}
+
+.survey-submit-hint.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
 /* Results Charts */
 .results-summary {
     display: grid;
