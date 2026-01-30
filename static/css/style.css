@@ -1475,4 +1475,7 @@ a:hover {
 .survey-item-description {
     font-size: 0.875rem;
     color: var(--muted-foreground);
+    font-style: italic;
+    line-height: 1.4;
+    max-width: 400px;
 }
