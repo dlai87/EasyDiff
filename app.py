@@ -2,6 +2,8 @@ from flask import Flask, render_template, redirect, url_for, flash, request, jso
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from authlib.integrations.flask_client import OAuth
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from datetime import datetime
 import uuid
 import json
@@ -36,6 +38,57 @@ google = oauth.register(
         'scope': 'openid email profile'
     }
 )
+
+# Email setup
+mail = Mail(app)
+
+def get_serializer():
+    return URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+def generate_reset_token(email):
+    serializer = get_serializer()
+    return serializer.dumps(email, salt='password-reset-salt')
+
+def verify_reset_token(token, expiration=3600):
+    serializer = get_serializer()
+    try:
+        email = serializer.loads(token, salt='password-reset-salt', max_age=expiration)
+        return email
+    except (SignatureExpired, BadSignature):
+        return None
+
+def send_reset_email(user):
+    token = generate_reset_token(user.email)
+    reset_url = url_for('reset_password', token=token, _external=True)
+
+    msg = Message(
+        'Password Reset Request - EasyDiff',
+        recipients=[user.email]
+    )
+    msg.body = f'''Hi {user.name},
+
+You requested to reset your password for EasyDiff.
+
+Click the link below to reset your password:
+{reset_url}
+
+This link will expire in 1 hour.
+
+If you did not request a password reset, please ignore this email.
+
+Best regards,
+EasyDiff Team
+'''
+    msg.html = f'''
+<p>Hi {user.name},</p>
+<p>You requested to reset your password for EasyDiff.</p>
+<p>Click the link below to reset your password:</p>
+<p><a href="{reset_url}">{reset_url}</a></p>
+<p>This link will expire in 1 hour.</p>
+<p>If you did not request a password reset, please ignore this email.</p>
+<p>Best regards,<br>EasyDiff Team</p>
+'''
+    mail.send(msg)
 
 
 @login_manager.user_loader
@@ -201,6 +254,70 @@ def logout():
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
+
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+
+        if not email:
+            flash('Please enter your email address.', 'error')
+            return render_template('auth/forgot_password.html')
+
+        user = User.query.filter_by(email=email).first()
+
+        # Always show success message to prevent email enumeration
+        if user and user.has_password:
+            try:
+                send_reset_email(user)
+            except Exception as e:
+                # Log error but don't expose to user
+                print(f"Failed to send reset email: {e}")
+
+        flash('If an account exists with that email, you will receive a password reset link.', 'info')
+        return redirect(url_for('login'))
+
+    return render_template('auth/forgot_password.html')
+
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+
+    email = verify_reset_token(token)
+    if not email:
+        flash('The password reset link is invalid or has expired.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        flash('The password reset link is invalid or has expired.', 'error')
+        return redirect(url_for('forgot_password'))
+
+    if request.method == 'POST':
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+
+        if password != confirm_password:
+            flash('Passwords do not match.', 'error')
+            return render_template('auth/reset_password.html', token=token)
+
+        user.password_hash = generate_password_hash(password)
+        db.session.commit()
+
+        flash('Your password has been reset. You can now log in.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('auth/reset_password.html', token=token)
 
 
 # ============== Dashboard Routes ==============
@@ -501,7 +618,7 @@ def study_export(id):
     for rank, (item_id, data) in enumerate(ranked_items, 1):
         writer.writerow([
             rank,
-            data['text'],
+            data['name'],
             data['normalized_score'],
             data['raw_score'],
             data['best_count'],

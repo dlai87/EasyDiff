@@ -40,7 +40,13 @@
             <!-- Preference Ranking -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Preference Ranking</h2>
+                    <div class="title-with-info">
+                        <h2 class="card-title">Preference Ranking</h2>
+                        <span class="info-tooltip">
+                            <span class="info-icon">?</span>
+                            <span class="tooltip-content">Items are ranked using the Best-Worst Counting method. Raw Score = (Best selections) - (Worst selections). Scores are normalized to 0-100 where 100 = most preferred and 0 = least preferred.</span>
+                        </span>
+                    </div>
                     <p class="card-description">Items ranked by preference score (0-100)</p>
                 </div>
 
@@ -61,7 +67,13 @@
             <!-- Best/Worst Counts -->
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">Tornado Chart</h2>
+                    <div class="title-with-info">
+                        <h2 class="card-title">Best vs. Worst Selection Chart</h2>
+                        <span class="info-tooltip">
+                            <span class="info-icon">?</span>
+                            <span class="tooltip-content">Shows how many times each item was selected as Best (green, left) versus Worst (red, right). Items with more Best and fewer Worst selections have higher preference scores.</span>
+                        </span>
+                    </div>
                     <p class="card-description">Best vs Worst selection counts</p>
                 </div>
 
@@ -108,7 +120,13 @@
         <!-- Raw Data Table -->
         <div class="card mt-6">
             <div class="card-header">
-                <h2 class="card-title">Detailed Scores</h2>
+                <div class="title-with-info">
+                    <h2 class="card-title">Detailed Scores</h2>
+                    <span class="info-tooltip">
+                        <span class="info-icon">?</span>
+                        <span class="tooltip-content">Score: Normalized preference (0-100). Raw Score: Best count minus Worst count. Best/Worst Count: Times selected as best or worst. Appearances: How often the item appeared in question sets.</span>
+                    </span>
+                </div>
                 <p class="card-description">Raw count data for each item</p>
             </div>
 

@@ -44,7 +44,10 @@
             </div>
 
             <div class="form-group">
-                <label for="password" class="form-label">Password</label>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="password" class="form-label" style="margin-bottom: 0;">Password</label>
+                    <a href="{{ url_for('forgot_password') }}" class="text-sm">Forgot password?</a>
+                </div>
                 <input
                     type="password"
                     id="password"
