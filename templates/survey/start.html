@@ -23,11 +23,19 @@
         <h2 class="text-lg font-semibold mb-4">How This Works</h2>
 
         <div class="mb-6">
+            {% set custom_q_count = study.custom_questions.count() %}
+            {% if custom_q_count > 0 %}
+            <p class="text-muted mb-4">
+                First, you'll answer {{ custom_q_count }} brief question{{ 's' if custom_q_count != 1 else '' }}.
+                Then, you'll be shown {{ study.sets_per_respondent }} comparison questions with {{ study.items_per_set }} options each.
+            </p>
+            {% else %}
             <p class="text-muted mb-4">
                 You'll be shown {{ study.sets_per_respondent }} questions. Each question shows {{ study.items_per_set }} options.
             </p>
+            {% endif %}
 
-            <p class="text-muted mb-4">For each question:</p>
+            <p class="text-muted mb-4">For each comparison question:</p>
 
             <ul style="list-style: disc; padding-left: var(--space-6); color: var(--muted-foreground);">
                 <li class="mb-2">Select the <strong class="text-success">{{ study.best_label }}</strong> option - the one you prefer most</li>

@@ -147,6 +147,67 @@ Competitive pricing"
                     </div>
                 {% endif %}
             </div>
+
+            <!-- Pre-Survey Questions Section -->
+            <div class="card">
+                <div class="card-header flex justify-between items-center">
+                    <div>
+                        <h2 class="card-title">Pre-Survey Questions</h2>
+                        <p class="card-description">Optional questions shown before MaxDiff comparison</p>
+                    </div>
+                    <span class="badge badge-{{ 'active' if custom_questions else 'draft' }}">
+                        {{ custom_questions|length }} question{{ 's' if custom_questions|length != 1 else '' }}
+                    </span>
+                </div>
+
+                {% if study.status == 'DRAFT' %}
+                <button type="button" class="btn btn-secondary mb-4" onclick="openAddQuestionModal()">
+                    + Add Question
+                </button>
+                {% endif %}
+
+                {% if custom_questions %}
+                    <ul class="item-list">
+                        {% for question in custom_questions %}
+                            <li class="item-row">
+                                <span class="item-number">{{ loop.index }}</span>
+                                <div class="item-content">
+                                    <span class="item-name">{{ question.question_text }}</span>
+                                    <span class="item-description">
+                                        {{ question.question_type | replace('_', ' ') | title }}
+                                        {% if question.is_required %} - Required{% else %} - Optional{% endif %}
+                                    </span>
+                                </div>
+                                {% if study.status == 'DRAFT' %}
+                                    <div class="item-actions">
+                                        <button
+                                            type="button"
+                                            class="btn btn-ghost btn-sm question-edit-btn"
+                                            data-question-id="{{ question.id }}"
+                                            data-question-text="{{ question.question_text }}"
+                                            data-question-type="{{ question.question_type }}"
+                                            data-is-required="{{ 'true' if question.is_required else 'false' }}"
+                                            data-config='{{ question.config_json }}'
+                                            data-options="{% for opt in question.options.all() %}{{ opt.option_text }}{% if not loop.last %}&#10;{% endif %}{% endfor %}"
+                                            title="Edit question"
+                                        >Edit</button>
+                                        <form method="POST" style="display: inline;" data-confirm="Delete this question?">
+                                            <input type="hidden" name="action" value="delete_custom_question">
+                                            <input type="hidden" name="question_id" value="{{ question.id }}">
+                                            <button type="submit" class="btn btn-ghost btn-sm text-danger" title="Delete question">Delete</button>
+                                        </form>
+                                    </div>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="empty-state-inline">
+                        <p class="text-muted">No pre-survey questions yet.</p>
+                        <p class="text-xs text-muted mt-2">Add questions to gather demographic or contextual information before the comparison task.</p>
+                    </div>
+                {% endif %}
+            </div>
         </div>
 
         <!-- Sidebar: Settings & Info -->
@@ -357,6 +418,159 @@ Competitive pricing"
         </form>
     </div>
 </div>
+
+<!-- Add Custom Question Modal -->
+<div id="add-question-modal" class="modal-backdrop hidden">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Pre-Survey Question</h3>
+        </div>
+        <form method="POST" id="add-question-form">
+            <input type="hidden" name="action" value="add_custom_question">
+
+            <div class="form-group">
+                <label for="add-question-type" class="form-label">Question Type</label>
+                <select id="add-question-type" name="question_type" class="form-select" onchange="updateQuestionTypeFields('add')">
+                    <option value="text">Text Input</option>
+                    <option value="single_choice">Single Choice</option>
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="rating_scale">Rating Scale</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="add-question-text" class="form-label">Question Text</label>
+                <input type="text" id="add-question-text" name="question_text" class="form-input" placeholder="Enter your question..." required>
+            </div>
+
+            <div class="form-group form-checkbox">
+                <input type="checkbox" id="add-is-required" name="is_required" checked>
+                <label for="add-is-required">Required question</label>
+            </div>
+
+            <!-- Text-specific fields -->
+            <div id="add-text-fields" class="question-type-fields">
+                <div class="form-group">
+                    <label for="add-placeholder" class="form-label">Placeholder text (optional)</label>
+                    <input type="text" id="add-placeholder" name="placeholder" class="form-input" placeholder="e.g., Enter your answer...">
+                </div>
+            </div>
+
+            <!-- Choice-specific fields -->
+            <div id="add-choice-fields" class="question-type-fields hidden">
+                <div class="form-group">
+                    <label for="add-options" class="form-label">Options (one per line)</label>
+                    <textarea id="add-options" name="options" class="form-textarea" rows="4" placeholder="Option 1
+Option 2
+Option 3"></textarea>
+                </div>
+            </div>
+
+            <!-- Rating scale fields -->
+            <div id="add-rating-fields" class="question-type-fields hidden">
+                <div class="grid grid-2 gap-3">
+                    <div class="form-group">
+                        <label for="add-min-value" class="form-label">Min Value</label>
+                        <input type="number" id="add-min-value" name="min_value" class="form-input" value="1" min="0" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-max-value" class="form-label">Max Value</label>
+                        <input type="number" id="add-max-value" name="max_value" class="form-input" value="5" min="1" max="10">
+                    </div>
+                </div>
+                <div class="grid grid-2 gap-3">
+                    <div class="form-group">
+                        <label for="add-min-label" class="form-label">Min Label (optional)</label>
+                        <input type="text" id="add-min-label" name="min_label" class="form-input" placeholder="e.g., Not at all">
+                    </div>
+                    <div class="form-group">
+                        <label for="add-max-label" class="form-label">Max Label (optional)</label>
+                        <input type="text" id="add-max-label" name="max_label" class="form-input" placeholder="e.g., Very much">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddQuestionModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Question</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Custom Question Modal -->
+<div id="edit-question-modal" class="modal-backdrop hidden">
+    <div class="modal" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Edit Pre-Survey Question</h3>
+        </div>
+        <form method="POST" id="edit-question-form">
+            <input type="hidden" name="action" value="update_custom_question">
+            <input type="hidden" name="question_id" id="edit-question-id">
+
+            <div class="form-group">
+                <label class="form-label">Question Type</label>
+                <input type="text" id="edit-question-type-display" class="form-input" disabled>
+                <p class="form-hint">Question type cannot be changed after creation</p>
+            </div>
+
+            <div class="form-group">
+                <label for="edit-question-text" class="form-label">Question Text</label>
+                <input type="text" id="edit-question-text" name="question_text" class="form-input" required>
+            </div>
+
+            <div class="form-group form-checkbox">
+                <input type="checkbox" id="edit-is-required" name="is_required">
+                <label for="edit-is-required">Required question</label>
+            </div>
+
+            <!-- Text-specific fields -->
+            <div id="edit-text-fields" class="question-type-fields hidden">
+                <div class="form-group">
+                    <label for="edit-placeholder" class="form-label">Placeholder text (optional)</label>
+                    <input type="text" id="edit-placeholder" name="placeholder" class="form-input">
+                </div>
+            </div>
+
+            <!-- Choice-specific fields -->
+            <div id="edit-choice-fields" class="question-type-fields hidden">
+                <div class="form-group">
+                    <label for="edit-options" class="form-label">Options (one per line)</label>
+                    <textarea id="edit-options" name="options" class="form-textarea" rows="4"></textarea>
+                </div>
+            </div>
+
+            <!-- Rating scale fields -->
+            <div id="edit-rating-fields" class="question-type-fields hidden">
+                <div class="grid grid-2 gap-3">
+                    <div class="form-group">
+                        <label for="edit-min-value" class="form-label">Min Value</label>
+                        <input type="number" id="edit-min-value" name="min_value" class="form-input" min="0" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-max-value" class="form-label">Max Value</label>
+                        <input type="number" id="edit-max-value" name="max_value" class="form-input" min="1" max="10">
+                    </div>
+                </div>
+                <div class="grid grid-2 gap-3">
+                    <div class="form-group">
+                        <label for="edit-min-label" class="form-label">Min Label (optional)</label>
+                        <input type="text" id="edit-min-label" name="min_label" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-max-label" class="form-label">Max Label (optional)</label>
+                        <input type="text" id="edit-max-label" name="max_label" class="form-input">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditQuestionModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -534,6 +748,105 @@ if (publishBtn) {
             // Change action to save_and_publish which will save config AND publish
             actionInput.value = 'save_and_publish';
             configForm.submit();
+        }
+    });
+}
+
+// Custom Question Modals
+const addQuestionModal = document.getElementById('add-question-modal');
+const editQuestionModal = document.getElementById('edit-question-modal');
+
+function openAddQuestionModal() {
+    // Reset form
+    document.getElementById('add-question-form').reset();
+    document.getElementById('add-is-required').checked = true;
+    updateQuestionTypeFields('add');
+    addQuestionModal.classList.remove('hidden');
+}
+
+function closeAddQuestionModal() {
+    addQuestionModal.classList.add('hidden');
+}
+
+function closeEditQuestionModal() {
+    editQuestionModal.classList.remove('hidden');
+    editQuestionModal.classList.add('hidden');
+}
+
+function updateQuestionTypeFields(prefix) {
+    const typeSelect = document.getElementById(prefix + '-question-type');
+    const type = typeSelect ? typeSelect.value : document.getElementById('edit-question-type-display').dataset.type;
+
+    const textFields = document.getElementById(prefix + '-text-fields');
+    const choiceFields = document.getElementById(prefix + '-choice-fields');
+    const ratingFields = document.getElementById(prefix + '-rating-fields');
+
+    if (textFields) textFields.classList.add('hidden');
+    if (choiceFields) choiceFields.classList.add('hidden');
+    if (ratingFields) ratingFields.classList.add('hidden');
+
+    if (type === 'text' && textFields) {
+        textFields.classList.remove('hidden');
+    } else if ((type === 'single_choice' || type === 'multiple_choice') && choiceFields) {
+        choiceFields.classList.remove('hidden');
+    } else if (type === 'rating_scale' && ratingFields) {
+        ratingFields.classList.remove('hidden');
+    }
+}
+
+// Edit Question button handlers
+document.querySelectorAll('.question-edit-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const questionId = this.dataset.questionId;
+        const questionText = this.dataset.questionText;
+        const questionType = this.dataset.questionType;
+        const isRequired = this.dataset.isRequired === 'true';
+        const config = JSON.parse(this.dataset.config || '{}');
+        const options = this.dataset.options || '';
+
+        document.getElementById('edit-question-id').value = questionId;
+        document.getElementById('edit-question-text').value = questionText;
+        document.getElementById('edit-question-type-display').value = questionType.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        document.getElementById('edit-question-type-display').dataset.type = questionType;
+        document.getElementById('edit-is-required').checked = isRequired;
+
+        // Hide all type-specific fields first
+        document.getElementById('edit-text-fields').classList.add('hidden');
+        document.getElementById('edit-choice-fields').classList.add('hidden');
+        document.getElementById('edit-rating-fields').classList.add('hidden');
+
+        // Show and populate type-specific fields
+        if (questionType === 'text') {
+            document.getElementById('edit-text-fields').classList.remove('hidden');
+            document.getElementById('edit-placeholder').value = config.placeholder || '';
+        } else if (questionType === 'single_choice' || questionType === 'multiple_choice') {
+            document.getElementById('edit-choice-fields').classList.remove('hidden');
+            document.getElementById('edit-options').value = options;
+        } else if (questionType === 'rating_scale') {
+            document.getElementById('edit-rating-fields').classList.remove('hidden');
+            document.getElementById('edit-min-value').value = config.min_value || 1;
+            document.getElementById('edit-max-value').value = config.max_value || 5;
+            document.getElementById('edit-min-label').value = config.min_label || '';
+            document.getElementById('edit-max-label').value = config.max_label || '';
+        }
+
+        editQuestionModal.classList.remove('hidden');
+    });
+});
+
+// Close modals on backdrop click
+if (addQuestionModal) {
+    addQuestionModal.addEventListener('click', function(e) {
+        if (e.target === addQuestionModal) {
+            closeAddQuestionModal();
+        }
+    });
+}
+
+if (editQuestionModal) {
+    editQuestionModal.addEventListener('click', function(e) {
+        if (e.target === editQuestionModal) {
+            closeEditQuestionModal();
         }
     });
 }

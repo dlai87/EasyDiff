@@ -47,6 +47,8 @@ class Study(db.Model):
 
     items = db.relationship('Item', backref='study', lazy='dynamic', cascade='all, delete-orphan', order_by='Item.order')
     responses = db.relationship('Response', backref='study', lazy='dynamic', cascade='all, delete-orphan')
+    custom_questions = db.relationship('CustomQuestion', backref='study', lazy='dynamic',
+                                       cascade='all, delete-orphan', order_by='CustomQuestion.order')
 
     def __init__(self, **kwargs):
         super(Study, self).__init__(**kwargs)
@@ -112,6 +114,7 @@ class Response(db.Model):
     study_id = db.Column(db.Integer, db.ForeignKey('studies.id'), nullable=False)
 
     answers = db.relationship('Answer', backref='response', lazy='dynamic', cascade='all, delete-orphan', order_by='Answer.set_index')
+    custom_answers = db.relationship('CustomQuestionAnswer', backref='response', lazy='dynamic', cascade='all, delete-orphan')
 
     def __init__(self, **kwargs):
         super(Response, self).__init__(**kwargs)
@@ -151,3 +154,69 @@ class Answer(db.Model):
 
     def __repr__(self):
         return f'<Answer set={self.set_index}>'
+
+
+class CustomQuestion(db.Model):
+    __tablename__ = 'custom_questions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    study_id = db.Column(db.Integer, db.ForeignKey('studies.id'), nullable=False)
+    question_text = db.Column(db.String(500), nullable=False)
+    question_type = db.Column(db.String(20), nullable=False)  # text, single_choice, multiple_choice, rating_scale
+    is_required = db.Column(db.Boolean, default=True)
+    order = db.Column(db.Integer, default=0)
+    config_json = db.Column(db.Text, default='{}')  # For scale range, placeholder text, etc.
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    options = db.relationship('CustomQuestionOption', backref='question', lazy='dynamic',
+                            cascade='all, delete-orphan', order_by='CustomQuestionOption.order')
+
+    @property
+    def config(self):
+        return json.loads(self.config_json) if self.config_json else {}
+
+    @config.setter
+    def config(self, value):
+        self.config_json = json.dumps(value)
+
+    def __repr__(self):
+        return f'<CustomQuestion {self.question_text[:30]}>'
+
+
+class CustomQuestionOption(db.Model):
+    __tablename__ = 'custom_question_options'
+
+    id = db.Column(db.Integer, primary_key=True)
+    question_id = db.Column(db.Integer, db.ForeignKey('custom_questions.id'), nullable=False)
+    option_text = db.Column(db.String(200), nullable=False)
+    order = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f'<CustomQuestionOption {self.option_text[:30]}>'
+
+
+class CustomQuestionAnswer(db.Model):
+    __tablename__ = 'custom_question_answers'
+
+    id = db.Column(db.Integer, primary_key=True)
+    response_id = db.Column(db.Integer, db.ForeignKey('responses.id'), nullable=False)
+    question_id = db.Column(db.Integer, db.ForeignKey('custom_questions.id'), nullable=False)
+    answer_text = db.Column(db.Text, nullable=True)  # For text questions
+    answer_value = db.Column(db.Integer, nullable=True)  # For rating scale
+    answer_option_ids_json = db.Column(db.Text, nullable=True)  # For choice questions (JSON array)
+    answered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    question = db.relationship('CustomQuestion')
+
+    @property
+    def answer_option_ids(self):
+        if self.answer_option_ids_json:
+            return json.loads(self.answer_option_ids_json)
+        return []
+
+    @answer_option_ids.setter
+    def answer_option_ids(self, value):
+        self.answer_option_ids_json = json.dumps(value)
+
+    def __repr__(self):
+        return f'<CustomQuestionAnswer q={self.question_id}>'

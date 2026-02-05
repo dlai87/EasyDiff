@@ -157,6 +157,86 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- Pre-Survey Question Results -->
+        {% if custom_question_results %}
+        <div class="card mt-6">
+            <div class="card-header">
+                <h2 class="card-title">Pre-Survey Question Results</h2>
+                <p class="card-description">Responses to custom questions asked before the MaxDiff comparison</p>
+            </div>
+
+            {% for result in custom_question_results %}
+                <div class="custom-question-result {% if not loop.last %}mb-6{% endif %}">
+                    <h3 class="text-lg font-semibold mb-2">{{ result.question.question_text }}</h3>
+                    <p class="text-sm text-muted mb-3">
+                        {{ result.type | replace('_', ' ') | title }}
+                        {% if result.question.is_required %} - Required{% else %} - Optional{% endif %}
+                    </p>
+
+                    {% if result.type == 'text' %}
+                        {% if result.responses %}
+                            <div class="text-responses">
+                                {% for response in result.responses %}
+                                    <div class="text-response-item">
+                                        <p>{{ response }}</p>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted">No text responses</p>
+                        {% endif %}
+
+                    {% elif result.type == 'rating_scale' %}
+                        <div class="rating-result">
+                            <div class="rating-summary mb-4">
+                                <span class="stat-value">{{ result.average }}</span>
+                                <span class="text-muted"> average rating ({{ result.count }} responses)</span>
+                            </div>
+                            <div class="rating-distribution">
+                                {% for value, count in result.distribution.items() %}
+                                    {% set pct = (count / result.count * 100) if result.count > 0 else 0 %}
+                                    <div class="rating-dist-item">
+                                        <span class="rating-dist-label">{{ value }}</span>
+                                        <div class="option-bar">
+                                            <div class="option-bar-fill" style="width: {{ pct }}%"></div>
+                                        </div>
+                                        <span class="rating-dist-count">{{ count }} ({{ pct|round(1) }}%)</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            {% if result.config.min_label or result.config.max_label %}
+                                <div class="flex justify-between text-sm text-muted mt-2">
+                                    <span>{{ result.config.min_label or '' }}</span>
+                                    <span>{{ result.config.max_label or '' }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                    {% elif result.type in ['single_choice', 'multiple_choice'] %}
+                        <div class="option-results">
+                            {% for opt_id, opt_data in result.option_counts.items() %}
+                                <div class="option-result-item">
+                                    <div class="option-result-header">
+                                        <span class="option-result-text">{{ opt_data.option.option_text }}</span>
+                                        <span class="option-result-count">{{ opt_data.count }} ({{ opt_data.percentage }}%)</span>
+                                    </div>
+                                    <div class="option-bar">
+                                        <div class="option-bar-fill" style="width: {{ opt_data.percentage }}%"></div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            <p class="text-sm text-muted mt-2">{{ result.total_responses }} total responses</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                {% if not loop.last %}
+                    <hr class="my-6" style="border-color: var(--border);">
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
     {% else %}
         <div class="card">
             <div class="empty-state">

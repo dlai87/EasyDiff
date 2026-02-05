@@ -12,7 +12,7 @@ import io
 import os
 
 from config import Config
-from models import db, User, Study, Item, Response, Answer
+from models import db, User, Study, Item, Response, Answer, CustomQuestion, CustomQuestionOption, CustomQuestionAnswer
 from maxdiff import generate_sets, calculate_scores, get_ranked_items, get_response_statistics
 
 app = Flask(__name__)
@@ -493,9 +493,106 @@ def study_edit(id):
             db.session.commit()
             flash('Study moved back to draft.', 'info')
 
+        elif action == 'add_custom_question':
+            question_text = request.form.get('question_text', '').strip()
+            question_type = request.form.get('question_type', 'text')
+            is_required = request.form.get('is_required') == 'on'
+
+            if question_text and question_type in ['text', 'single_choice', 'multiple_choice', 'rating_scale']:
+                max_order = db.session.query(db.func.max(CustomQuestion.order)).filter_by(study_id=study.id).scalar() or 0
+                config = {}
+
+                if question_type == 'text':
+                    config['placeholder'] = request.form.get('placeholder', '').strip()
+                elif question_type == 'rating_scale':
+                    config['min_value'] = int(request.form.get('min_value', 1))
+                    config['max_value'] = int(request.form.get('max_value', 5))
+                    config['min_label'] = request.form.get('min_label', '').strip()
+                    config['max_label'] = request.form.get('max_label', '').strip()
+
+                question = CustomQuestion(
+                    study_id=study.id,
+                    question_text=question_text,
+                    question_type=question_type,
+                    is_required=is_required,
+                    order=max_order + 1
+                )
+                question.config = config
+                db.session.add(question)
+                db.session.commit()
+
+                # Add options for choice questions
+                if question_type in ['single_choice', 'multiple_choice']:
+                    options_text = request.form.get('options', '').strip()
+                    if options_text:
+                        for i, opt_text in enumerate(options_text.split('\n')):
+                            opt_text = opt_text.strip()
+                            if opt_text:
+                                option = CustomQuestionOption(
+                                    question_id=question.id,
+                                    option_text=opt_text,
+                                    order=i
+                                )
+                                db.session.add(option)
+                        db.session.commit()
+
+                flash('Pre-survey question added.', 'success')
+            else:
+                flash('Question text is required.', 'error')
+
+        elif action == 'update_custom_question':
+            question_id = request.form.get('question_id')
+            question_text = request.form.get('question_text', '').strip()
+            is_required = request.form.get('is_required') == 'on'
+
+            if question_id and question_text:
+                question = CustomQuestion.query.filter_by(id=question_id, study_id=study.id).first()
+                if question:
+                    question.question_text = question_text
+                    question.is_required = is_required
+
+                    config = question.config or {}
+                    if question.question_type == 'text':
+                        config['placeholder'] = request.form.get('placeholder', '').strip()
+                    elif question.question_type == 'rating_scale':
+                        config['min_value'] = int(request.form.get('min_value', 1))
+                        config['max_value'] = int(request.form.get('max_value', 5))
+                        config['min_label'] = request.form.get('min_label', '').strip()
+                        config['max_label'] = request.form.get('max_label', '').strip()
+                    question.config = config
+
+                    # Update options for choice questions
+                    if question.question_type in ['single_choice', 'multiple_choice']:
+                        # Delete existing options
+                        CustomQuestionOption.query.filter_by(question_id=question.id).delete()
+                        options_text = request.form.get('options', '').strip()
+                        if options_text:
+                            for i, opt_text in enumerate(options_text.split('\n')):
+                                opt_text = opt_text.strip()
+                                if opt_text:
+                                    option = CustomQuestionOption(
+                                        question_id=question.id,
+                                        option_text=opt_text,
+                                        order=i
+                                    )
+                                    db.session.add(option)
+
+                    db.session.commit()
+                    flash('Pre-survey question updated.', 'success')
+
+        elif action == 'delete_custom_question':
+            question_id = request.form.get('question_id')
+            if question_id:
+                question = CustomQuestion.query.filter_by(id=question_id, study_id=study.id).first()
+                if question:
+                    db.session.delete(question)
+                    db.session.commit()
+                    flash('Pre-survey question deleted.', 'success')
+
         return redirect(url_for('study_edit', id=study.id))
 
     items = study.items.order_by(Item.order).all()
+    custom_questions = study.custom_questions.order_by(CustomQuestion.order).all()
     share_url = url_for('survey_start', token=study.share_token, _external=True)
 
     # Calculate response stats for active/closed studies
@@ -504,7 +601,7 @@ def study_edit(id):
         'completed': Response.query.filter_by(study_id=study.id, is_preview=False).filter(Response.completed_at != None).count()
     }
 
-    return render_template('study/edit.html', study=study, items=items, share_url=share_url, response_stats=response_stats)
+    return render_template('study/edit.html', study=study, items=items, custom_questions=custom_questions, share_url=share_url, response_stats=response_stats)
 
 
 @app.route('/study/<int:id>/bulk-import', methods=['POST'])
@@ -575,6 +672,7 @@ def study_results(id):
     # Exclude preview responses from results
     responses = study.responses.filter_by(is_preview=False).all()
     completed_responses = [r for r in responses if r.completed_at]
+    completed_response_ids = [r.id for r in completed_responses]
 
     # Get all answers from completed responses
     answers = []
@@ -586,11 +684,68 @@ def study_results(id):
     ranked_items = get_ranked_items(scores)
     stats = get_response_statistics(responses)
 
+    # Process custom question results
+    custom_questions = study.custom_questions.order_by(CustomQuestion.order).all()
+    custom_question_results = []
+
+    for question in custom_questions:
+        question_result = {
+            'question': question,
+            'type': question.question_type,
+            'responses': []
+        }
+
+        # Get answers for this question from completed responses
+        question_answers = CustomQuestionAnswer.query.filter(
+            CustomQuestionAnswer.question_id == question.id,
+            CustomQuestionAnswer.response_id.in_(completed_response_ids)
+        ).all() if completed_response_ids else []
+
+        if question.question_type == 'text':
+            # List all text responses
+            question_result['responses'] = [a.answer_text for a in question_answers if a.answer_text]
+        elif question.question_type == 'rating_scale':
+            # Calculate average and distribution
+            values = [a.answer_value for a in question_answers if a.answer_value is not None]
+            question_result['average'] = round(sum(values) / len(values), 2) if values else 0
+            question_result['count'] = len(values)
+            config = question.config or {}
+            min_val = config.get('min_value', 1)
+            max_val = config.get('max_value', 5)
+            distribution = {i: 0 for i in range(min_val, max_val + 1)}
+            for v in values:
+                if v in distribution:
+                    distribution[v] += 1
+            question_result['distribution'] = distribution
+            question_result['config'] = config
+        elif question.question_type in ['single_choice', 'multiple_choice']:
+            # Count per option with percentages
+            options = question.options.order_by(CustomQuestionOption.order).all()
+            option_counts = {opt.id: {'option': opt, 'count': 0} for opt in options}
+            total_responses = len(question_answers)
+
+            for answer in question_answers:
+                option_ids = answer.answer_option_ids or []
+                for oid in option_ids:
+                    if oid in option_counts:
+                        option_counts[oid]['count'] += 1
+
+            # Calculate percentages
+            for opt_id in option_counts:
+                count = option_counts[opt_id]['count']
+                option_counts[opt_id]['percentage'] = round((count / total_responses * 100) if total_responses > 0 else 0, 1)
+
+            question_result['option_counts'] = option_counts
+            question_result['total_responses'] = total_responses
+
+        custom_question_results.append(question_result)
+
     return render_template('study/results.html',
                          study=study,
                          ranked_items=ranked_items,
                          stats=stats,
-                         scores=scores)
+                         scores=scores,
+                         custom_question_results=custom_question_results)
 
 
 @app.route('/study/<int:id>/export')
@@ -613,6 +768,9 @@ def study_export(id):
     # Create CSV
     output = io.StringIO()
     writer = csv.writer(output)
+
+    # Section 1: MaxDiff Results
+    writer.writerow(['=== MaxDiff Results ==='])
     writer.writerow(['Rank', 'Item', 'Normalized Score', 'Raw Score', 'Best Count', 'Worst Count', 'Appearances'])
 
     for rank, (item_id, data) in enumerate(ranked_items, 1):
@@ -625,6 +783,79 @@ def study_export(id):
             data['worst_count'],
             data['appearances']
         ])
+
+    # Section 2: Custom Question Responses
+    custom_questions = study.custom_questions.order_by(CustomQuestion.order).all()
+    if custom_questions:
+        writer.writerow([])
+        writer.writerow(['=== Pre-Survey Question Responses ==='])
+
+        for question in custom_questions:
+            writer.writerow([])
+            writer.writerow([f'Question: {question.question_text}'])
+            writer.writerow([f'Type: {question.question_type}', f'Required: {"Yes" if question.is_required else "No"}'])
+
+            if question.question_type == 'text':
+                writer.writerow(['Response ID', 'Answer'])
+                for response in completed_responses:
+                    answer = CustomQuestionAnswer.query.filter_by(
+                        response_id=response.id,
+                        question_id=question.id
+                    ).first()
+                    if answer and answer.answer_text:
+                        writer.writerow([response.respondent_id[:8], answer.answer_text])
+                    else:
+                        writer.writerow([response.respondent_id[:8], '(no response)'])
+
+            elif question.question_type == 'rating_scale':
+                config = question.config or {}
+                writer.writerow(['Response ID', 'Rating'])
+                for response in completed_responses:
+                    answer = CustomQuestionAnswer.query.filter_by(
+                        response_id=response.id,
+                        question_id=question.id
+                    ).first()
+                    if answer and answer.answer_value is not None:
+                        writer.writerow([response.respondent_id[:8], answer.answer_value])
+                    else:
+                        writer.writerow([response.respondent_id[:8], '(no response)'])
+
+                # Add summary statistics
+                all_answers = CustomQuestionAnswer.query.filter(
+                    CustomQuestionAnswer.question_id == question.id,
+                    CustomQuestionAnswer.response_id.in_([r.id for r in completed_responses])
+                ).all()
+                values = [a.answer_value for a in all_answers if a.answer_value is not None]
+                if values:
+                    writer.writerow([])
+                    writer.writerow(['Summary:', f'Average: {round(sum(values)/len(values), 2)}', f'Responses: {len(values)}'])
+
+            elif question.question_type in ['single_choice', 'multiple_choice']:
+                options = question.options.order_by(CustomQuestionOption.order).all()
+                option_map = {opt.id: opt.option_text for opt in options}
+
+                writer.writerow(['Response ID', 'Selected Option(s)'])
+                for response in completed_responses:
+                    answer = CustomQuestionAnswer.query.filter_by(
+                        response_id=response.id,
+                        question_id=question.id
+                    ).first()
+                    if answer and answer.answer_option_ids:
+                        selected = [option_map.get(oid, 'Unknown') for oid in answer.answer_option_ids]
+                        writer.writerow([response.respondent_id[:8], '; '.join(selected)])
+                    else:
+                        writer.writerow([response.respondent_id[:8], '(no response)'])
+
+                # Add option counts summary
+                writer.writerow([])
+                writer.writerow(['Option', 'Count', 'Percentage'])
+                total_responses = len(completed_responses)
+                for opt in options:
+                    count = sum(1 for r in completed_responses
+                              for a in [CustomQuestionAnswer.query.filter_by(response_id=r.id, question_id=question.id).first()]
+                              if a and a.answer_option_ids and opt.id in a.answer_option_ids)
+                    pct = round(count / total_responses * 100, 1) if total_responses > 0 else 0
+                    writer.writerow([opt.option_text, count, f'{pct}%'])
 
     output.seek(0)
 
@@ -658,6 +889,29 @@ def study_duplicate(id):
     for item in study.items.all():
         new_item = Item(name=item.name, description=item.description, order=item.order, study_id=new_study.id)
         db.session.add(new_item)
+
+    # Copy custom questions
+    for question in study.custom_questions.all():
+        new_question = CustomQuestion(
+            study_id=new_study.id,
+            question_text=question.question_text,
+            question_type=question.question_type,
+            is_required=question.is_required,
+            order=question.order,
+            config_json=question.config_json
+        )
+        db.session.add(new_question)
+        db.session.commit()
+
+        # Copy options for choice questions
+        for option in question.options.all():
+            new_option = CustomQuestionOption(
+                question_id=new_question.id,
+                option_text=option.option_text,
+                order=option.order
+            )
+            db.session.add(new_option)
+
     db.session.commit()
 
     flash('Study duplicated.', 'success')
@@ -728,6 +982,12 @@ def survey_begin(token):
     session['survey_sets'] = sets
     session['survey_current_set'] = 0
     session['survey_is_preview'] = is_preview
+    session['survey_custom_question_index'] = 0
+
+    # Check if there are custom questions
+    custom_questions = study.custom_questions.order_by(CustomQuestion.order).all()
+    if custom_questions:
+        return redirect(url_for('survey_custom_questions', token=token))
 
     return redirect(url_for('survey_question', token=token))
 
@@ -757,6 +1017,7 @@ def survey_question(token):
         session.pop('survey_response_id', None)
         session.pop('survey_sets', None)
         session.pop('survey_current_set', None)
+        session.pop('survey_custom_question_index', None)
         return redirect(url_for('survey_complete', token=token))
 
     if request.method == 'POST':
@@ -799,10 +1060,97 @@ def survey_question(token):
                          is_preview=is_preview)
 
 
+@app.route('/survey/<token>/questions', methods=['GET', 'POST'])
+def survey_custom_questions(token):
+    study = Study.query.filter_by(share_token=token).first_or_404()
+    is_preview = session.get('survey_is_preview', False)
+
+    # Allow ACTIVE or preview mode
+    if study.status not in ['ACTIVE', 'DRAFT'] and not is_preview:
+        return redirect(url_for('survey_start', token=token))
+
+    response_id = session.get('survey_response_id')
+    current_index = session.get('survey_custom_question_index', 0)
+
+    if not response_id:
+        return redirect(url_for('survey_start', token=token))
+
+    response = Response.query.get_or_404(response_id)
+    custom_questions = study.custom_questions.order_by(CustomQuestion.order).all()
+
+    if not custom_questions or current_index >= len(custom_questions):
+        # No more custom questions, proceed to MaxDiff
+        return redirect(url_for('survey_question', token=token))
+
+    current_question = custom_questions[current_index]
+
+    if request.method == 'POST':
+        # Get the answer based on question type
+        answer_text = None
+        answer_value = None
+        answer_option_ids = None
+        has_answer = False
+
+        if current_question.question_type == 'text':
+            answer_text = request.form.get('answer_text', '').strip()
+            has_answer = bool(answer_text)
+        elif current_question.question_type == 'rating_scale':
+            rating = request.form.get('rating')
+            if rating:
+                answer_value = int(rating)
+                has_answer = True
+        elif current_question.question_type == 'single_choice':
+            option_id = request.form.get('option_id')
+            if option_id:
+                answer_option_ids = [int(option_id)]
+                has_answer = True
+        elif current_question.question_type == 'multiple_choice':
+            option_ids = request.form.getlist('option_ids')
+            if option_ids:
+                answer_option_ids = [int(oid) for oid in option_ids]
+                has_answer = True
+
+        # Validate required questions
+        if current_question.is_required and not has_answer:
+            flash('This question is required.', 'error')
+        else:
+            # Save the answer (even if empty for optional questions)
+            if has_answer:
+                answer = CustomQuestionAnswer(
+                    response_id=response.id,
+                    question_id=current_question.id,
+                    answer_text=answer_text,
+                    answer_value=answer_value
+                )
+                if answer_option_ids:
+                    answer.answer_option_ids = answer_option_ids
+                db.session.add(answer)
+                db.session.commit()
+
+            # Move to next question
+            session['survey_custom_question_index'] = current_index + 1
+            return redirect(url_for('survey_custom_questions', token=token))
+
+    # Get options for choice questions
+    options = []
+    if current_question.question_type in ['single_choice', 'multiple_choice']:
+        options = current_question.options.order_by(CustomQuestionOption.order).all()
+
+    return render_template('survey/custom_question.html',
+                         study=study,
+                         token=token,
+                         question=current_question,
+                         options=options,
+                         current_index=current_index + 1,
+                         total_questions=len(custom_questions),
+                         is_preview=is_preview)
+
+
 @app.route('/survey/<token>/complete')
 def survey_complete(token):
     study = Study.query.filter_by(share_token=token).first_or_404()
     is_preview = session.pop('survey_is_preview', False)
+    session.pop('survey_custom_question_index', None)
     return render_template('survey/complete.html', study=study, is_preview=is_preview)
 
 

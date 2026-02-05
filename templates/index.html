@@ -63,27 +63,213 @@
     </div>
 </section>
 
-<section class="section" style="background: var(--muted);">
+<section id="example" class="section" style="background: var(--muted);">
+    <div class="container">
+        <div class="section-header">
+            <h2>See It In Action</h2>
+            <p class="text-muted">Real example: A product team surveyed 127 users to prioritize their next features</p>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Example Preference Ranking -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Preference Ranking</h3>
+                    <p class="card-description">Features ranked by preference score (0-100)</p>
+                </div>
+
+                <ul class="ranking-list">
+                    <li class="ranking-item">
+                        <span class="ranking-position top-3">1</span>
+                        <span class="ranking-text">Dark Mode</span>
+                        <span class="ranking-score">100</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 100%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position top-3">2</span>
+                        <span class="ranking-text">Offline Access</span>
+                        <span class="ranking-score">82</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 82%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position top-3">3</span>
+                        <span class="ranking-text">Team Collaboration</span>
+                        <span class="ranking-score">65</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 65%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position">4</span>
+                        <span class="ranking-text">Custom Reports</span>
+                        <span class="ranking-score">48</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 48%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position">5</span>
+                        <span class="ranking-text">API Integration</span>
+                        <span class="ranking-score">35</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 35%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position">6</span>
+                        <span class="ranking-text">Email Notifications</span>
+                        <span class="ranking-score">18</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 18%"></div>
+                        </div>
+                    </li>
+                    <li class="ranking-item">
+                        <span class="ranking-position">7</span>
+                        <span class="ranking-text">Calendar Sync</span>
+                        <span class="ranking-score">0</span>
+                        <div class="ranking-bar">
+                            <div class="ranking-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Example Best/Worst Chart -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Best vs. Worst Selection Chart</h3>
+                    <p class="card-description">Best vs Worst selection counts</p>
+                </div>
+
+                <div class="tornado-chart">
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 100%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">45</span>
+                        </div>
+                        <span class="tornado-label">Dark Mode</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">5</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 12%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 84%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">38</span>
+                        </div>
+                        <span class="tornado-label">Offline Access</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">12</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 29%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 67%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">30</span>
+                        </div>
+                        <span class="tornado-label">Team Collaboration</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">18</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 43%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 49%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">22</span>
+                        </div>
+                        <span class="tornado-label">Custom Reports</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">20</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 48%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 40%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">18</span>
+                        </div>
+                        <span class="tornado-label">API Integration</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">25</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 60%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 27%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">12</span>
+                        </div>
+                        <span class="tornado-label">Email Notifications</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">32</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 76%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                    <div class="tornado-item">
+                        <div class="tornado-bar-container tornado-bar-left">
+                            <div class="tornado-bar tornado-bar-best" style="width: 18%; min-width: 20px;"></div>
+                            <span class="text-xs text-muted" style="margin-left: 4px;">8</span>
+                        </div>
+                        <span class="tornado-label">Calendar Sync</span>
+                        <div class="tornado-bar-container tornado-bar-right">
+                            <span class="text-xs text-muted" style="margin-right: 4px;">42</span>
+                            <div class="tornado-bar tornado-bar-worst" style="width: 100%; min-width: 20px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-center gap-6 mt-4 text-sm">
+                    <span class="flex items-center gap-2">
+                        <span style="width: 12px; height: 12px; background: var(--success); border-radius: 2px;"></span>
+                        Best selections
+                    </span>
+                    <span class="flex items-center gap-2">
+                        <span style="width: 12px; height: 12px; background: var(--danger); border-radius: 2px;"></span>
+                        Worst selections
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-8">
+            <p class="text-muted mb-4">The team now knows: users want Dark Mode and Offline Access first. Calendar Sync can wait.</p>
+            <a href="{{ url_for('register') }}" class="btn btn-primary">Create Your Own Study</a>
+        </div>
+    </div>
+</section>
+
+<section class="section">
     <div class="container">
         <div class="section-header">
             <h2>Perfect For</h2>
         </div>
-        <div class="grid grid-4">
+        <div class="grid grid-5">
             <div class="text-center py-4">
                 <h4>Product Teams</h4>
-                <p class="text-muted text-sm">Prioritize features based on real user preferences</p>
+                <p class="text-muted text-sm">Prioritize features based on what users value most — not opinions</p>
             </div>
             <div class="text-center py-4">
-                <h4>Marketers</h4>
-                <p class="text-muted text-sm">Test messaging and value propositions</p>
+                <h4>UX & Research</h4>
+                <p class="text-muted text-sm">Uncover real user preferences when everything feels "important"</p>
             </div>
             <div class="text-center py-4">
-                <h4>Researchers</h4>
-                <p class="text-muted text-sm">Conduct academic studies with best-worst scaling</p>
+                <h4>Marketing Teams</h4>
+                <p class="text-muted text-sm">Clarify which messages and value propositions matter most</p>
             </div>
             <div class="text-center py-4">
-                <h4>UX Designers</h4>
-                <p class="text-muted text-sm">Discover what users value most in your product</p>
+                <h4>Team Leaders</h4>
+                <p class="text-muted text-sm">Turn differing opinions into clear team priorities</p>
+            </div>
+            <div class="text-center py-4">
+                <h4>Founders & Small Teams</h4>
+                <p class="text-muted text-sm">Make confident decisions with limited time and resources</p>
             </div>
         </div>
     </div>
